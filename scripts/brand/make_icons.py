@@ -134,6 +134,12 @@ def main():
         imgs.append({"filename": name, "idiom": "universal", "scale": f"{sc}x"})
     write_json(os.path.join(logo_dir, "Contents.json"), {"images": imgs, "info": {"author": "xcode", "version": 1}})
 
+    art_dir = os.path.join(ASSETS, "Artwork.imageset")
+    os.makedirs(art_dir, exist_ok=True)
+    app_icon(os.path.join(art_dir, "Artwork.png"), size=600)
+    write_json(os.path.join(art_dir, "Contents.json"), {
+        "images": [{"filename": "Artwork.png", "idiom": "universal"}], "info": {"author": "xcode", "version": 1}})
+
     def color_set(name, light, dark):
         cdir = os.path.join(ASSETS, f"{name}.colorset")
         os.makedirs(cdir, exist_ok=True)

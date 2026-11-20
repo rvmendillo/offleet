@@ -40,7 +40,7 @@ jobs:
       - name: Validate content decoding (Swift models)
         run: |
           if [ -f Tools/ValidateContent.swift ]; then
-            swiftc -O Offleet/Models/*.swift Tools/ValidateContent.swift -o /tmp/validate
+            swiftc -parse-as-library -O Offleet/Models/*.swift Tools/ValidateContent.swift -o /tmp/validate
             /tmp/validate Offleet/Resources/Content
           fi
       - name: Generate Xcode project
