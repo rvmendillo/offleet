@@ -274,13 +274,13 @@ private struct StageContent: View {
             }
             .frame(maxWidth: .infinity)
         case "problem", "example":
-            ShrinkToFit(minScale: 0.7) { _ in
+            ShrinkToFit(minScale: 0.6) { _ in
                 VStack(alignment: .leading, spacing: 12) {
                     Label(frame.k == "problem" ? "The problem" : "Example", systemImage: frame.k == "problem" ? "questionmark.bubble.fill" : "text.magnifyingglass")
                         .font(.headline).foregroundStyle(Brand.aqua)
                     ForEach(Array((frame.card?.lines ?? [frame.cap]).enumerated()), id: \.offset) { i, line in
                         Text(line)
-                            .font(frame.k == "example" ? .system(size: 16, weight: i < 2 ? .semibold : .regular, design: .monospaced) : .system(size: 18, weight: .medium, design: .rounded))
+                            .font(frame.k == "example" ? .system(size: line.count > 120 ? 13 : 16, weight: i < 2 ? .semibold : .regular, design: .monospaced) : .system(size: 18, weight: .medium, design: .rounded))
                             .foregroundStyle(.white.opacity(i < 2 ? 0.95 : 0.75))
                             .fixedSize(horizontal: false, vertical: true)
                     }

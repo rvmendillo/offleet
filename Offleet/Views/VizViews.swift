@@ -117,8 +117,8 @@ struct ShrinkToFit<Content: View>: View {
 }
 
 extension View {
-    /// Top-aligned card text that shrinks (to 70%) rather than running under the presenter.
-    func shrinkToFit(minScale: CGFloat = 0.7) -> some View {
+    /// Top-aligned card text that shrinks (to 60%) rather than running under the presenter.
+    func shrinkToFit(minScale: CGFloat = 0.6) -> some View {
         ShrinkToFit(minScale: minScale) { _ in self }
     }
 }
