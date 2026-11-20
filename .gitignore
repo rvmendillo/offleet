@@ -1,0 +1,14 @@
+# Xcode
+*.xcodeproj/
+build/
+DerivedData/
+*.ipa
+Payload/
+xcuserdata/
+.DS_Store
+# Python
+__pycache__/
+*.pyc
+.venv/
+# Java verification scratch
+content/.build/

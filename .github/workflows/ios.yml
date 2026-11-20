@@ -1,0 +1,82 @@
+name: iOS IPA
+
+on:
+  push:
+    branches: ["**"]
+    paths-ignore: ["**.md", "docs/**"]
+  workflow_dispatch:
+
+concurrency:
+  group: ios-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  content:
+    name: Verify content (Python + Java)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - uses: actions/setup-java@v4
+        with: { distribution: temurin, java-version: "21" }
+      - name: Build + verify content bundle
+        run: |
+          if [ -f content/tools/build.py ]; then python3 content/tools/build.py --check; else echo "no content pipeline yet"; fi
+
+  ipa:
+    name: Build unsigned IPA
+    runs-on: macos-15
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - name: Toolchain info
+        run: |
+          ls /Applications | grep -i xcode || true
+          xcodebuild -version
+          swift --version
+      - name: Install XcodeGen
+        run: brew install xcodegen
+      - name: Validate content decoding (Swift models)
+        run: |
+          if [ -f Tools/ValidateContent.swift ]; then
+            swiftc -O Offleet/Models/*.swift Tools/ValidateContent.swift -o /tmp/validate
+            /tmp/validate Offleet/Resources/Content
+          fi
+      - name: Generate Xcode project
+        run: xcodegen generate
+      - name: Build (Release, iphoneos, no signing)
+        run: |
+          set -o pipefail
+          xcodebuild \
+            -project Offleet.xcodeproj \
+            -scheme Offleet \
+            -configuration Release \
+            -sdk iphoneos \
+            -destination 'generic/platform=iOS' \
+            -derivedDataPath build \
+            -IDEBuildingContinueBuildingAfterErrors=YES \
+            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" \
+            build | tee build.log | grep -E "error:|warning: unre|BUILD (SUCCEEDED|FAILED)" || true
+          grep -q "BUILD SUCCEEDED" build.log
+      - name: Show compiler errors
+        if: failure()
+        run: grep -E -A3 "error:" build.log | head -300 || true
+      - name: Package IPA
+        run: |
+          APP=build/Build/Products/Release-iphoneos/Offleet.app
+          test -d "$APP"
+          rm -rf Payload && mkdir Payload && cp -R "$APP" Payload/
+          zip -qry Offleet.ipa Payload
+          ls -lh Offleet.ipa
+          shasum -a 256 Offleet.ipa
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Offleet-ipa
+          path: Offleet.ipa
+          retention-days: 30
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: build-log
+          path: build.log
