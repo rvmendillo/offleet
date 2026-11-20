@@ -49,8 +49,8 @@ problem(
                 int sum = 0, minLen = nums.length + 1, left = 0;
                 for (int right = 0; right < nums.length; right++) {
                     sum += nums[right]; //>
-                    for (; sum >= s; sum -= nums[left], left++) {
-                        minLen = Math.min(minLen, right - left + 1); //>2,3
+                    for (; sum >= s; sum -= nums[left], left++) { //>3
+                        minLen = Math.min(minLen, right - left + 1); //>2
                     }
                 }
                 return minLen <= nums.length ? minLen : 0;

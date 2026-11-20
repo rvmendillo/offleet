@@ -7,9 +7,9 @@
 06-mock -uiScreen mock
 07-bite-flow -uiScreen bite -uiBite sd-rag-assistant
 08-bite-calculus -uiScreen bite -uiBite calc-ftc
-09-tutorial-user-template -uiScreen tutorial -uiProblem shortest-sum-at-least -uiFrame 12 -uiLang java
+09-tutorial-user-template -uiScreen tutorial -uiProblem shortest-sum-at-least -uiFrame 14 -uiLang java
 10-tutorial-tree -uiScreen tutorial -uiProblem tree-diameter -uiFrame 9
-11-tutorial-grid -uiScreen tutorial -uiProblem count-islands -uiFrame 10
+11-tutorial-grid -uiScreen tutorial -uiProblem count-islands -uiFrame 7
 12-tutorial-linked -uiScreen tutorial -uiProblem reverse-list -uiFrame 10
 13-tutorial-graph -uiScreen tutorial -uiProblem can-finish-courses -uiFrame 9
 14-tutorial-table -uiScreen tutorial -uiProblem fewest-coins -uiFrame 10
@@ -20,6 +20,7 @@
 19-nowplaying -uiScreen nowplaying -uiBook handbook
 20-me -uiScreen me
 21-review -uiScreen review
+24-tutorial-design-example -uiScreen tutorial -uiProblem consistent-hash-ring -uiFrame 2
 dark
 22-home-dark -uiScreen home
 23-tutorial-dark -uiScreen tutorial -uiProblem window-maximums -uiFrame 12
