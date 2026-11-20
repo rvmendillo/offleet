@@ -81,55 +81,80 @@ private struct VizTitle: View {
 
 // MARK: - Stage
 
-private struct StageHeightKey: PreferenceKey {
+private struct FitHeightKey: PreferenceKey {
     static let defaultValue: CGFloat = 0
     static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) { value = max(value, nextValue()) }
 }
 
-/// Renders every component present in a frame's state, shrinking it (down to 62%) when it is taller than the
-/// stage so that a narrated step never hides part of its picture; anything taller still scrolls.
-struct VizStage: View {
-    let state: VizState
+/// Lays its content out at natural height and scales it down (to `minScale`) when that is taller than the space
+/// available, so a tutorial frame never hides part of its picture or text under the presenter. Anything taller
+/// than that still scrolls. The closure receives the available size.
+struct ShrinkToFit<Content: View>: View {
+    var minScale: CGFloat = 0.62
+    @ViewBuilder let content: (CGSize) -> Content
     @State private var contentHeight: CGFloat = 0
 
     var body: some View {
         GeometryReader { geo in
-            let scale = contentHeight > geo.size.height && geo.size.height > 0 ? max(0.62, geo.size.height / contentHeight) : 1
+            let scale = contentHeight > geo.size.height && geo.size.height > 0 ? max(minScale, geo.size.height / contentHeight) : 1
             ScrollView(.vertical, showsIndicators: false) {
-                VStack(alignment: .leading, spacing: 16) {
-                    ForEach(Array((state.arrays ?? []).enumerated()), id: \.offset) { _, a in
-                        ArrayVizView(a: a, width: geo.size.width - 8)
-                    }
-                    if let g = state.grid { GridVizView(g: g, isTable: false, width: geo.size.width - 8) }
-                    if let g = state.table { GridVizView(g: g, isTable: true, width: geo.size.width - 8) }
-                    if let l = state.linked { LinkedVizView(l: l) }
-                    if let t = state.tree { TreeVizView(t: t, width: geo.size.width - 8) }
-                    if let g = state.graph {
-                        let w = min(geo.size.width - 8, 300)
-                        GraphVizView(g: g, width: w, height: max(150, w * 0.72))
-                    }
-                    if let iv = state.intervals, !iv.isEmpty { IntervalsVizView(rows: iv, width: geo.size.width - 8) }
-                    if let b = state.bits, !b.isEmpty { BitsVizView(rows: b) }
-                    if let s = state.stacks {
-                        ForEach(Array(s.enumerated()), id: \.offset) { _, st in StackVizView(s: st) }
-                    }
-                    if let m = state.maps {
-                        ForEach(Array(m.enumerated()), id: \.offset) { _, mv in MapVizView(m: mv) }
-                    }
-                    if let o = state.out { OutVizView(o: o) }
-                    if let v = state.vars, !v.isEmpty { VarsVizView(vars: v) }
-                }
-                .padding(4)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .fixedSize(horizontal: false, vertical: true)
-                .background(GeometryReader { g in Color.clear.preference(key: StageHeightKey.self, value: g.size.height) })
-                .scaleEffect(scale, anchor: .topLeading)
-                .frame(height: contentHeight > 0 ? contentHeight * scale : nil, alignment: .top)
+                content(geo.size)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .background(GeometryReader { g in Color.clear.preference(key: FitHeightKey.self, value: g.size.height) })
+                    .scaleEffect(scale, anchor: .topLeading)
+                    .frame(height: contentHeight > 0 ? contentHeight * scale : nil, alignment: .top)
             }
         }
-        .onPreferenceChange(StageHeightKey.self) { contentHeight = $0 }
+        .onPreferenceChange(FitHeightKey.self) { h in
+            if contentHeight == 0 {
+                contentHeight = h
+            } else if abs(contentHeight - h) > 0.5 {
+                withAnimation(.easeInOut(duration: 0.25)) { contentHeight = h }
+            }
+        }
+    }
+}
+
+extension View {
+    /// Top-aligned card text that shrinks (to 70%) rather than running under the presenter.
+    func shrinkToFit(minScale: CGFloat = 0.7) -> some View {
+        ShrinkToFit(minScale: minScale) { _ in self }
+    }
+}
+
+/// Renders every component present in a frame's state.
+struct VizStage: View {
+    let state: VizState
+
+    var body: some View {
+        ShrinkToFit { size in
+            VStack(alignment: .leading, spacing: 16) {
+                ForEach(Array((state.arrays ?? []).enumerated()), id: \.offset) { _, a in
+                    ArrayVizView(a: a, width: size.width - 8)
+                }
+                if let g = state.grid { GridVizView(g: g, isTable: false, width: size.width - 8) }
+                if let g = state.table { GridVizView(g: g, isTable: true, width: size.width - 8) }
+                if let l = state.linked { LinkedVizView(l: l) }
+                if let t = state.tree { TreeVizView(t: t, width: size.width - 8) }
+                if let g = state.graph {
+                    let w = min(size.width - 8, 300)
+                    GraphVizView(g: g, width: w, height: max(150, w * 0.72))
+                }
+                if let iv = state.intervals, !iv.isEmpty { IntervalsVizView(rows: iv, width: size.width - 8) }
+                if let b = state.bits, !b.isEmpty { BitsVizView(rows: b) }
+                if let s = state.stacks {
+                    ForEach(Array(s.enumerated()), id: \.offset) { _, st in StackVizView(s: st) }
+                }
+                if let m = state.maps {
+                    ForEach(Array(m.enumerated()), id: \.offset) { _, mv in MapVizView(m: mv) }
+                }
+                if let o = state.out { OutVizView(o: o) }
+                if let v = state.vars, !v.isEmpty { VarsVizView(vars: v) }
+            }
+            .padding(4)
+        }
         .animation(.spring(response: 0.45, dampingFraction: 0.82), value: state)
-        .animation(.easeInOut(duration: 0.25), value: contentHeight)
     }
 }
 

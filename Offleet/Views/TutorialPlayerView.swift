@@ -129,7 +129,7 @@ struct TutorialPlayerView: View {
             }
             HStack(alignment: .bottom, spacing: 10) {
                 PresenterBadge(presenter: settings.presenter, size: 66, owner: TutorialPlayer.owner)
-                if settings.captions, let f = player.frame, f.isStep || ["complexity", "outro", "example"].contains(f.k) {
+                if settings.captions, let f = player.frame, f.isStep || ["complexity", "outro"].contains(f.k) {
                     Text(f.cap)
                         .font(.system(size: 15, weight: .medium, design: .rounded))
                         .foregroundStyle(.white)
@@ -274,18 +274,18 @@ private struct StageContent: View {
             }
             .frame(maxWidth: .infinity)
         case "problem", "example":
-            VStack(alignment: .leading, spacing: 12) {
-                Label(frame.k == "problem" ? "The problem" : "Example", systemImage: frame.k == "problem" ? "questionmark.bubble.fill" : "text.magnifyingglass")
-                    .font(.headline).foregroundStyle(Brand.aqua)
-                ForEach(Array((frame.card?.lines ?? [frame.cap]).enumerated()), id: \.offset) { i, line in
-                    Text(line)
-                        .font(frame.k == "example" ? .system(size: 16, weight: i < 2 ? .semibold : .regular, design: .monospaced) : .system(size: 18, weight: .medium, design: .rounded))
-                        .foregroundStyle(.white.opacity(i < 2 ? 0.95 : 0.75))
-                        .fixedSize(horizontal: false, vertical: true)
+            ShrinkToFit(minScale: 0.7) { _ in
+                VStack(alignment: .leading, spacing: 12) {
+                    Label(frame.k == "problem" ? "The problem" : "Example", systemImage: frame.k == "problem" ? "questionmark.bubble.fill" : "text.magnifyingglass")
+                        .font(.headline).foregroundStyle(Brand.aqua)
+                    ForEach(Array((frame.card?.lines ?? [frame.cap]).enumerated()), id: \.offset) { i, line in
+                        Text(line)
+                            .font(frame.k == "example" ? .system(size: 16, weight: i < 2 ? .semibold : .regular, design: .monospaced) : .system(size: 18, weight: .medium, design: .rounded))
+                            .foregroundStyle(.white.opacity(i < 2 ? 0.95 : 0.75))
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
                 }
-                Spacer()
             }
-            .frame(maxWidth: .infinity, alignment: .leading)
         case "idea":
             let p = frame.card?.pattern.flatMap(patternLookup)
             VStack(alignment: .leading, spacing: 14) {
@@ -304,9 +304,8 @@ private struct StageContent: View {
                     .font(.system(size: 19, weight: .medium, design: .rounded))
                     .foregroundStyle(.white.opacity(0.92))
                     .fixedSize(horizontal: false, vertical: true)
-                Spacer()
             }
-            .frame(maxWidth: .infinity, alignment: .leading)
+            .shrinkToFit()
         case "complexity":
             VStack(spacing: 18) {
                 Spacer()
@@ -327,9 +326,8 @@ private struct StageContent: View {
                     .font(.system(size: 19, weight: .medium, design: .rounded))
                     .foregroundStyle(.white.opacity(0.92))
                     .fixedSize(horizontal: false, vertical: true)
-                Spacer()
             }
-            .frame(maxWidth: .infinity, alignment: .leading)
+            .shrinkToFit()
         default:
             VStack(spacing: 16) {
                 Spacer()
