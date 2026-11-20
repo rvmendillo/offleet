@@ -540,6 +540,7 @@ class _Tracer:
         ctx = {}
         for fr in reversed(chain):
             ctx.update(dict(fr.f_locals))
+        ctx["ARGS"] = dict(chain[-1].f_locals)  # the outermost call's variables (e.g. the whole tree's root)
         if is_ret:
             ctx["__return__"] = retval
             ctx["ret"] = retval
