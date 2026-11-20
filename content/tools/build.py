@@ -562,7 +562,7 @@ def export_books(problems, reviewer):
                                    for i, c in enumerate(hand, 1)]})
 
     def problem_chapter(p):
-        text = [p["title"] + ".", strip_md(p.get("eli5") or p["statement"])]
+        text = [strip_md(p.get("eli5") or p["statement"])]
         for a in p["approaches"]:
             text.append(f"Approach: {a['name']}.")
             text.append(strip_md(a["idea"]))
@@ -583,7 +583,7 @@ def export_books(problems, reviewer):
     for s in reviewer["subjects"]:
         chapters = []
         for u in s["units"]:
-            paras = [{"t": u["title"] + ".", "s": speakify(u["title"]) + "."}]
+            paras = []
             for b in u["bites"]:
                 paras.append({"t": b["title"] + ": " + b["tldr"], "s": b["say"]})
             chapters.append({"id": f"{s['id']}-{len(chapters) + 1}", "title": u["title"], "paras": paras})

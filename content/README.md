@@ -64,7 +64,8 @@ approach(
   **after** the line runs. On `if`/`for`/`while` headers it is spoken only when the body runs. On a line
   that calls another solution function it is spoken **before** the call (start the text with `^` to speak it
   after the call returns instead). On `return` lines `{ret}` is the
-  returned value. Helpers: `q(x)` quotes strings, `lst(xs)`, `yn(b)`, `plural(n, "word")`, `fv(x)`.
+  returned value. Helpers: `q(x)` quotes strings, `lst(xs)`, `yn(b)`, `plural(n, "word")`, `fv(x)`, `chain(node)`
+  (values of a linked list).
 - Java: `code //>` marks the line matching the next Python marker (in order). `//>3` or `//>2,3` maps
   explicit Python marker numbers. Markers are stripped from displayed code.
 - Keep narration friendly and concrete: say values, not variable syntax ("4 plus 6 is 10").

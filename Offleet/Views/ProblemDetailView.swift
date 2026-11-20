@@ -85,7 +85,7 @@ struct ProblemDetailView: View {
                 ForEach(p.patterns, id: \.self) { pid in
                     if let pat = content.pattern(pid) { PatternBadge(pattern: pat) }
                 }
-                ForEach(p.topics, id: \.self) { t in
+                ForEach(p.topics.filter { t in !p.patterns.contains { content.pattern($0)?.name == t } }, id: \.self) { t in
                     Text(t).font(.caption2.weight(.medium))
                         .padding(.horizontal, 8).padding(.vertical, 3)
                         .background(Capsule().fill(Color(uiColor: .tertiarySystemFill)))

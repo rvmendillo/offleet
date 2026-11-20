@@ -481,7 +481,16 @@ def _plural(n, word):
     return f"{n} {word}" + ("" if n == 1 else "s")
 
 
-HELPERS = {"q": _q, "lst": _lst, "yn": _yn, "plural": _plural, "fv": fv}
+def _chain(node, limit=40):
+    out, seen = [], set()
+    while node is not None and id(node) not in seen and len(out) < limit:
+        seen.add(id(node))
+        out.append(node.val)
+        node = node.next
+    return out
+
+
+HELPERS = {"q": _q, "lst": _lst, "yn": _yn, "plural": _plural, "fv": fv, "chain": _chain}
 
 
 # ------------------------------------------------------------ the tracer

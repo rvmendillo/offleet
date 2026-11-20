@@ -129,7 +129,7 @@ struct TutorialPlayerView: View {
             }
             HStack(alignment: .bottom, spacing: 10) {
                 PresenterBadge(presenter: settings.presenter, size: 66, owner: TutorialPlayer.owner)
-                if settings.captions, let f = player.frame {
+                if settings.captions, let f = player.frame, f.isStep || ["complexity", "outro", "example"].contains(f.k) {
                     Text(f.cap)
                         .font(.system(size: 15, weight: .medium, design: .rounded))
                         .foregroundStyle(.white)
