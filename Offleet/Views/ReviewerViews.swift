@@ -4,9 +4,10 @@ struct ReviewerHomeView: View {
     @EnvironmentObject private var content: ContentStore
     @EnvironmentObject private var progress: ProgressStore
     @EnvironmentObject private var settings: AppSettings
+    @State private var path = DebugLaunch.learnPath
 
     var body: some View {
-        NavigationStack {
+        NavigationStack(path: $path) {
             ScrollView {
                 VStack(alignment: .leading, spacing: 18) {
                     HStack(spacing: 14) {

@@ -33,7 +33,7 @@ from runtime import (compare, convert_arg, normalize, reset_registries, select_o
                      Timeout)
 from speech import speakify  # noqa: E402
 from tracer import (AuthoringError, entry_name, make_namespace, py_params, split_c_like, split_py, trace,  # noqa: E402
-                    FILENAME, fv)
+                    FILENAME, fv, build_args)
 
 PROBLEM_MODULES = [
     "two_pointers", "sliding_window", "arrays_hashing", "prefix_sum", "binary_search", "stack",
@@ -240,7 +240,7 @@ def verify_python(p, rep: Report):
                     got = outs
                 else:
                     fn = ns[entry_name(a["py_disp"])]
-                    conv = [convert_arg(copy.deepcopy(x), jt, row=j) for j, (x, jt) in enumerate(zip(args, p["jtypes"]))]
+                    conv = build_args(args, p["jtypes"], p.get("cycle", False))
                     ret = with_timeout(2, fn, *conv)
                     got = fix_null(p, select_output(p.get("out", "ret"), ret, conv))
                     ok = compare(got, expected, p.get("check", "exact"))
@@ -284,7 +284,8 @@ def verify_java(problems, rep: Report):
             files.append(path)
             owners[path] = (p["id"], a["name"], len(header.split("\n")) - 1)
             key = f"{p['id']}#{a['aid']}"
-            job = {"key": key, "pkg": pkg, "design": p["design"], "tests": [t[0] for t in p["_tests"]]}
+            job = {"key": key, "pkg": pkg, "design": p["design"], "cycle": bool(p.get("cycle")),
+                   "tests": [t[0] for t in p["_tests"]]}
             if not p["design"]:
                 job.update({"cls": "Solution", "method": p["method"]})
             jobs.append((job, p, a))
@@ -341,7 +342,7 @@ def demo_desc(p, args):
         ops, oargs = args
         calls = [f"{op}({', '.join(jfmt(x) for x in av)})" for op, av in zip(ops, oargs)]
         return "the calls " + ", ".join(calls)
-    names = p.get("pnames") or [f"arg{i}" for i in range(len(args))]
+    names = (p.get("pnames") or [f"arg{i}" for i in range(len(args))]) + (["pos"] if p.get("cycle") else [])
     return ", ".join(f"{n} = {jfmt(v)}" for n, v in zip(names, args))
 
 
@@ -380,7 +381,8 @@ def build_algo_tutorial(p, a, rep: Report):
         if demo is None:
             demo = p["examples"][0][0] if p.get("examples") else p["_tests"][0][0]
         try:
-            raw, ret, missing = trace(a["py"], a.get("viz", {}), copy.deepcopy(demo), p.get("jtypes", []), design=p["design"])
+            raw, ret, missing = trace(a["py"], a.get("viz", {}), copy.deepcopy(demo), p.get("jtypes", []),
+                                      design=p["design"], cycle=p.get("cycle", False))
         except AuthoringError as e:
             rep.err(pid, f"{a['name']} tutorial: {e}")
             raw, missing = [], []

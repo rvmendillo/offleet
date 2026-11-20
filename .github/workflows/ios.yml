@@ -80,3 +80,27 @@ jobs:
         with:
           name: build-log
           path: build.log
+
+  screenshots:
+    name: Simulator screenshots
+    runs-on: macos-15
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install XcodeGen
+        run: brew install xcodegen
+      - name: Build for the iOS Simulator
+        run: |
+          xcodegen generate
+          set -o pipefail
+          xcodebuild -project Offleet.xcodeproj -scheme Offleet -configuration Debug -sdk iphonesimulator \
+            -destination 'generic/platform=iOS Simulator' -derivedDataPath simbuild \
+            CODE_SIGNING_ALLOWED=NO build | tail -3
+      - name: Capture screenshots
+        run: bash scripts/ci/screenshots.sh
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: screenshots
+          path: shots
+          retention-days: 14

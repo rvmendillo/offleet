@@ -58,6 +58,11 @@ struct TutorialPlayerView: View {
         if let a = approach {
             lang = a.languages.contains(settings.language) ? settings.language : (a.languages.first ?? "python")
         }
+        if let f = DebugLaunch.frame {
+            player.go(to: min(f, max(player.frames.count - 1, 0)))
+            scrub = Double(player.index)
+            return
+        }
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.45) { player.play() }
     }
 

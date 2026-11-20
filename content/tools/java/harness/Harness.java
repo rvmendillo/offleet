@@ -82,12 +82,25 @@ public final class Harness {
         } else {
             Class<?> cls = Class.forName(pkg + "." + job.get("cls"));
             List<Object> av = (List<Object>) test;
-            Method m = pick(cls, (String) job.get("method"), av.size());
+            Method m = pick(cls, (String) job.get("method"), Boolean.TRUE.equals(job.get("cycle")) ? 1 : av.size());
             m.setAccessible(true);
             Constructor<?> c = cls.getDeclaredConstructor();
             c.setAccessible(true);
             Object inst = Modifier.isStatic(m.getModifiers()) ? null : c.newInstance();
-            Object[] conv = convertAll(m.getGenericParameterTypes(), av);
+            Object[] conv;
+            if (Boolean.TRUE.equals(job.get("cycle"))) {
+                ListNode head = ListNode.of((List<Object>) av.get(0));
+                int pos = ((Number) av.get(1)).intValue();
+                if (pos >= 0 && head != null) {
+                    ListNode tail = head, target = null;
+                    for (int i = 0; tail.next != null; i++, tail = tail.next) if (i == pos) target = tail;
+                    if (target == null) target = tail;
+                    tail.next = target;
+                }
+                conv = new Object[]{head};
+            } else {
+                conv = convertAll(m.getGenericParameterTypes(), av);
+            }
             Object ret = m.invoke(inst, conv);
             r.put("ret", toJson(ret));
             List<Object> argsOut = new ArrayList<>();

@@ -3,7 +3,7 @@ import SwiftUI
 struct ProblemsView: View {
     @EnvironmentObject private var content: ContentStore
     @EnvironmentObject private var progress: ProgressStore
-    @State private var path = NavigationPath()
+    @State private var path = DebugLaunch.practicePath
     @State private var query = ""
     @State private var category = "all"
     @State private var difficulty = "All"

@@ -20,7 +20,7 @@ import re
 import sys
 from collections import deque
 
-from runtime import ListNode, TreeNode, Node, reset_registries, convert_arg
+from runtime import ListNode, TreeNode, Node, reset_registries, convert_arg, build_list
 
 FILENAME = "<offleet-solution>"
 PY_MARK = re.compile(r"\s*#>\s?(.*)$")
@@ -499,7 +499,7 @@ class _Tracer:
             caller = frame.f_back
             if caller is not None and caller.f_code.co_filename == FILENAME:
                 p = self.pending.get(id(caller))
-                if p and p[0] not in self.ranges:
+                if p and p[0] not in self.ranges and not p[2].startswith("^"):
                     del self.pending[id(caller)]
                     self._emit(caller, p, None, False)
         return self.local_trace
@@ -538,6 +538,7 @@ class _Tracer:
 
     def _emit(self, frame, p, retval, is_ret):
         ln, idx, tpl = p
+        tpl = tpl.lstrip("^").lstrip()
         ctx = self._context(frame, retval, is_ret)
         g = dict(self.g)
         g.update(HELPERS)
@@ -555,7 +556,14 @@ def make_namespace():
     return {"ListNode": ListNode, "TreeNode": TreeNode, "Node": Node, "__name__": "offleet_solution"}
 
 
-def trace(code: str, spec: dict, demo_args, jtypes, design=False, max_frames=600):
+def build_args(args, jtypes, cycle=False):
+    """Convert JSON test args to runtime objects (cycle: args = [values, pos] -> one list with a cycle)."""
+    if cycle:
+        return [build_list(args[0], 0, cycle_pos=args[1])]
+    return [convert_arg(copy.deepcopy(x), jt, row=i) for i, (x, jt) in enumerate(zip(args, jtypes))]
+
+
+def trace(code: str, spec: dict, demo_args, jtypes, design=False, max_frames=600, cycle=False):
     """Run `code` on demo args with tracing; returns (frames, return_value)."""
     disp, marks = split_py(code)
     ranges = {k: v for k, v in compound_ranges(disp).items() if k in marks}
@@ -575,7 +583,7 @@ def trace(code: str, spec: dict, demo_args, jtypes, design=False, max_frames=600
                 ret.append(getattr(obj, op)(*a))
         else:
             fn = ns[entry_name(disp)]
-            conv = [convert_arg(copy.deepcopy(x), jt, row=i) for i, (x, jt) in enumerate(zip(demo_args, jtypes))]
+            conv = build_args(demo_args, jtypes, cycle)
             ret = fn(*conv)
     except TooManyFrames:
         pass

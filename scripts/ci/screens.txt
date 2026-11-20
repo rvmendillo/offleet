@@ -1,0 +1,17 @@
+# name  launch-arguments   (one screenshot per line; "dark" switches the simulator to dark mode)
+01-onboarding -uiScreen onboarding
+02-home -uiScreen home
+03-practice -uiScreen practice
+04-problem -uiScreen problem -uiProblem pair-sum-sorted
+05-tutorial-title -uiScreen tutorial -uiProblem pair-sum-sorted -uiFrame 0
+06-tutorial-step -uiScreen tutorial -uiProblem pair-sum-sorted -uiFrame 9
+07-tutorial-window -uiScreen tutorial -uiProblem longest-unique-substring -uiFrame 15
+08-tutorial-rotate -uiScreen tutorial -uiProblem rotate-right -uiFrame 8
+09-tutorial-idea -uiScreen tutorial -uiProblem most-water -uiFrame 3
+10-learn -uiScreen learn
+11-listen -uiScreen listen
+12-nowplaying -uiScreen nowplaying
+13-me -uiScreen me
+dark
+14-home-dark -uiScreen home
+15-problem-dark -uiScreen problem -uiProblem three-sum-zero

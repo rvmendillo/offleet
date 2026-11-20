@@ -56,6 +56,9 @@ struct ProblemDetailView: View {
                 NotesSheet(problem: p)
             }
             .onAppear {
+                if DebugLaunch.screen == "tutorial", DebugLaunch.problem == p.id, launch == nil {
+                    launch = TutorialLaunch(approachId: DebugLaunch.approach ?? p.approaches.first?.id ?? "a1")
+                }
                 progress.opened(problem: p.id)
                 let langs = p.approaches.first?.languages ?? []
                 lang = langs.contains(settings.language) ? settings.language : (langs.first ?? "python")
