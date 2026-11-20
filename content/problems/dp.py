@@ -234,7 +234,7 @@ problem(
             ways = [1] + [0] * amount
             for coin in coins:
                 for a in range(coin, amount + 1):
-                    ways[a] += ways[a - coin]  #> Using coins up to {coin}, amount {a} can be made {ways[a]} ways.
+                    ways[a] += ways[a - coin]  #> Using coins up to {coin}, amount {a} can be made {plural(ways[a], "way")}.
             return ways[amount]
         ''',
         java='''

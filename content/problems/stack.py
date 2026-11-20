@@ -192,7 +192,7 @@ problem(
             for i, t in enumerate(temps):
                 while stack and temps[stack[-1]] < t:
                     j = stack.pop()
-                    res[j] = i - j  #> Day {j} ({temps[j]}°) waited {i - j} days for {t}°.
+                    res[j] = i - j  #> Day {j} ({temps[j]}°) waited {plural(i - j, "day")} for {t}°.
                 stack.append(i)  #> Day {i} ({t}°) starts waiting.
             return res
         ''',
@@ -594,7 +594,7 @@ problem(
             for p, s in sorted(zip(position, speed), reverse=True):
                 t = (target - p) / s
                 if not stack or t > stack[-1]:
-                    stack.append(t)  #> The car at mile {p} needs {fv(t)} hours, slower than the convoy ahead: a new convoy.
+                    stack.append(t)  #> The car at mile {p} needs {fv(t)} hour{"" if t == 1 else "s"}, slower than the convoy ahead: a new convoy.
             return len(stack)
         ''',
         java='''

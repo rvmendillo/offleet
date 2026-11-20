@@ -282,7 +282,7 @@ problem(
             res = []
             for c in range(len(nums), 0, -1):
                 for x in buckets[c]:
-                    res.append(x)  #> {x} appears {c} times, so it joins the answer.
+                    res.append(x)  #> {x} appears {plural(c, "time")}, so it joins the answer.
                     if len(res) == k:
                         return res
             return res

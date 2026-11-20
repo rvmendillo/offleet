@@ -204,7 +204,7 @@ problem(
                 self.capacity, self.rate, self.tokens, self.last = capacity, rate, capacity, 0
 
             def allow(self, t):
-                self.tokens = min(self.capacity, self.tokens + (t - self.last) * self.rate)  #> {t - self.last} seconds passed, so the bucket refills to {self.tokens} tokens.
+                self.tokens = min(self.capacity, self.tokens + (t - self.last) * self.rate)  #> {plural(t - self.last, "second")} passed, so the bucket refills to {plural(self.tokens, "token")}.
                 self.last = t
                 if self.tokens > 0:
                     self.tokens -= 1

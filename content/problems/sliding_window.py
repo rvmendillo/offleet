@@ -220,10 +220,10 @@ problem(
             count, top, best, left = {}, 0, 0, 0
             for right in range(len(s)):
                 count[s[right]] = count.get(s[right], 0) + 1
-                top = max(top, count[s[right]])  #> Add {q(s[right])}. The most common letter appears {top} times.
+                top = max(top, count[s[right]])  #> Add {q(s[right])}. The most common letter appears {plural(top, "time")}.
                 while right - left + 1 - top > k:
                     count[s[left]] -= 1
-                    left += 1  #> More than {k} changes needed, so shrink: left moves to {left}.
+                    left += 1  #> More than {plural(k, "change")} needed, so shrink: left moves to {left}.
                 best = max(best, right - left + 1)
             return best
         ''',
@@ -314,7 +314,7 @@ problem(
     approaches=[approach(
         name="Fixed Sliding Window", pattern="sliding-window", time="O(n)", space="O(1)",
         idea="""
-        Slide a window of length `len(p)` across `s` while maintaining letter counts. Each time the counts match `p`, the window's `left` index is an answer.
+        Slide a window as long as `p` across `s` while maintaining letter counts. Each time the counts match `p`, the window's `left` index is an answer.
         """,
         viz=viz(arr="s", ptr={"left": "left", "right": "right"}, win=("left", R_OR.format(d="-1")), out="res"),
         py='''
@@ -541,7 +541,7 @@ problem(
                     count[s[left]] -= 1
                     if count[s[left]] == 0:
                         del count[s[left]]
-                    left += 1  #> More than {k} letters, so shrink: left moves to {left}.
+                    left += 1  #> More than {plural(k, "letter")}, so shrink: left moves to {left}.
                 best = max(best, right - left + 1)  #> The window {q(s[left:right + 1])} is valid. Best: {best}.
             return best
         ''',
@@ -593,7 +593,7 @@ problem(
                 while prod >= k and left <= right:
                     prod //= nums[left]
                     left += 1
-                count += right - left + 1  #> The window product is {prod}, adding {right - left + 1} subarrays. Total: {count}.
+                count += right - left + 1  #> The window product is {prod}, adding {plural(right - left + 1, "subarray")}. Total: {count}.
             return count
         ''',
         java='''
@@ -793,7 +793,7 @@ problem(
                 if right - left + 1 > k:
                     count -= s[left] in "aeiou"
                     left += 1
-                best = max(best, count)  #> The window {q(s[left:right + 1])} has {count} vowels. Best: {best}.
+                best = max(best, count)  #> The window {q(s[left:right + 1])} has {plural(count, "vowel")}. Best: {best}.
             return best
         ''',
         java='''

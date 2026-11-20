@@ -29,7 +29,7 @@ problem(
             for i, x in enumerate(nums):
                 heapq.heappush(heap, x)
                 if len(heap) > k:
-                    heapq.heappop(heap)  #> More than {k} values, so drop the smallest.
+                    heapq.heappop(heap)  #> More than {plural(k, "value")}, so drop the smallest.
             return heap[0]  #> The heap's top, {heap[0]}, is the {k}-th largest.
         ''',
         java='''
@@ -121,7 +121,7 @@ problem(
             for x, y in points:
                 heapq.heappush(heap, (-(x * x + y * y), x, y))  #> Point ({x}, {y}) has squared distance {x * x + y * y}.
                 if len(heap) > k:
-                    heapq.heappop(heap)  #> More than {k} points kept, so drop the farthest.
+                    heapq.heappop(heap)  #> More than {plural(k, "point")} kept, so drop the farthest.
             return [[x, y] for _, x, y in heap]
         ''',
         java='''

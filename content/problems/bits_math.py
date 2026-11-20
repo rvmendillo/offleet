@@ -173,7 +173,7 @@ problem(
         viz=viz(bits=["n", ("n - 1", "n - 1")]),
         py='''
         def is_power_of_two(n):
-            return n > 0 and n & (n - 1) == 0  #> {n} AND {n - 1} is {n & (n - 1)}, so the answer is {ret}.
+            return n > 0 and n & (n - 1) == 0  #> {n} AND {n - 1} is {n & (n - 1)}, so the answer is {fv(ret)}.
         ''',
         java='''
         class Solution {

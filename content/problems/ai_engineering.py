@@ -242,7 +242,7 @@ problem(
                 scores.append(dot / (math.sqrt(sum(a * a for a in v)) * qn))  #> Vector {i} has cosine similarity {fv(scores[-1])}.
                 heapq.heappush(heap, (scores[-1], -i))
                 if len(heap) > k:
-                    heapq.heappop(heap)  #> More than {k} candidates, so drop the weakest.
+                    heapq.heappop(heap)  #> More than {plural(k, "candidate")}, so drop the weakest.
             return [-n for s, n in sorted(heap, reverse=True)]
         ''',
         java='''
