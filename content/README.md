@@ -127,6 +127,7 @@ subject(id="calculus", title="Calculus", icon="function", color="#F472B6", blurb
 
   "Longest" windows shrink first and record after: `for (; invalid; left++) remove(left);` then
   `best = Math.max(best, right - left + 1);`. Fixed windows use the same loop with `right - left + 1 > k`.
+- Don't name solution variables `q`, `lst`, `yn`, `fv`, `chain` or `plural`: they would shadow the narration helpers.
 - Names: `left` / `right` for window edges (Python mirrors the same structure with a `while` loop).
 - Keep solutions short and optimal: O(n) / O(1) where possible; prefer a Sliding Window or Two Pointers approach
   first whenever one exists, then other approaches.
