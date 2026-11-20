@@ -54,6 +54,21 @@ enum VizPalette {
     static let label = Color.white.opacity(0.62)
 }
 
+/// Renames the visuals' labels for the language on screen (the frames are traced from the Python solution).
+struct VizNames: Equatable {
+    var map: [String: String] = [:]
+    func callAsFunction(_ label: String) -> String { map[label] ?? label }
+}
+
+private struct VizNamesKey: EnvironmentKey { static let defaultValue = VizNames() }
+
+extension EnvironmentValues {
+    var vizNames: VizNames {
+        get { self[VizNamesKey.self] }
+        set { self[VizNamesKey.self] = newValue }
+    }
+}
+
 private struct VizTitle: View {
     let text: String
     var body: some View {
@@ -66,12 +81,20 @@ private struct VizTitle: View {
 
 // MARK: - Stage
 
-/// Renders every component present in a frame's state.
+private struct StageHeightKey: PreferenceKey {
+    static let defaultValue: CGFloat = 0
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) { value = max(value, nextValue()) }
+}
+
+/// Renders every component present in a frame's state, shrinking it (down to 62%) when it is taller than the
+/// stage so that a narrated step never hides part of its picture; anything taller still scrolls.
 struct VizStage: View {
     let state: VizState
+    @State private var contentHeight: CGFloat = 0
 
     var body: some View {
         GeometryReader { geo in
+            let scale = contentHeight > geo.size.height && geo.size.height > 0 ? max(0.62, geo.size.height / contentHeight) : 1
             ScrollView(.vertical, showsIndicators: false) {
                 VStack(alignment: .leading, spacing: 16) {
                     ForEach(Array((state.arrays ?? []).enumerated()), id: \.offset) { _, a in
@@ -81,7 +104,10 @@ struct VizStage: View {
                     if let g = state.table { GridVizView(g: g, isTable: true, width: geo.size.width - 8) }
                     if let l = state.linked { LinkedVizView(l: l) }
                     if let t = state.tree { TreeVizView(t: t, width: geo.size.width - 8) }
-                    if let g = state.graph { GraphVizView(g: g, width: min(geo.size.width - 8, 300)) }
+                    if let g = state.graph {
+                        let w = min(geo.size.width - 8, 300)
+                        GraphVizView(g: g, width: w, height: max(150, w * 0.72))
+                    }
                     if let iv = state.intervals, !iv.isEmpty { IntervalsVizView(rows: iv, width: geo.size.width - 8) }
                     if let b = state.bits, !b.isEmpty { BitsVizView(rows: b) }
                     if let s = state.stacks {
@@ -95,15 +121,22 @@ struct VizStage: View {
                 }
                 .padding(4)
                 .frame(maxWidth: .infinity, alignment: .leading)
+                .fixedSize(horizontal: false, vertical: true)
+                .background(GeometryReader { g in Color.clear.preference(key: StageHeightKey.self, value: g.size.height) })
+                .scaleEffect(scale, anchor: .topLeading)
+                .frame(height: contentHeight > 0 ? contentHeight * scale : nil, alignment: .top)
             }
         }
+        .onPreferenceChange(StageHeightKey.self) { contentHeight = $0 }
         .animation(.spring(response: 0.45, dampingFraction: 0.82), value: state)
+        .animation(.easeInOut(duration: 0.25), value: contentHeight)
     }
 }
 
 // MARK: - Array with pointers and window
 
 struct ArrayVizView: View {
+    @Environment(\.vizNames) private var name
     let a: ArrayViz
     let width: CGFloat
 
@@ -134,7 +167,7 @@ struct ArrayVizView: View {
         let top: CGFloat = 14
         let height = top + cell + 8 + CGFloat(rows) * 22
         VStack(alignment: .leading, spacing: 4) {
-            VizTitle(text: a.n)
+            VizTitle(text: name(a.n))
             ScrollView(.horizontal, showsIndicators: false) {
                 ZStack(alignment: .topLeading) {
                     if let w = a.w, w.count == 2, w[1] >= w[0] {
@@ -196,7 +229,7 @@ struct ArrayVizView: View {
     private func pointerChip(_ label: String) -> some View {
         VStack(spacing: 0) {
             Image(systemName: "arrowtriangle.up.fill").font(.system(size: 9))
-            Text(label).font(.system(size: 11, weight: .heavy, design: .rounded)).lineLimit(1).minimumScaleFactor(0.6)
+            Text(name(label)).font(.system(size: 11, weight: .heavy, design: .rounded)).lineLimit(1).minimumScaleFactor(0.6)
         }
         .foregroundStyle(VizPalette.pointer(label))
     }
@@ -205,6 +238,7 @@ struct ArrayVizView: View {
 // MARK: - Variables, maps, stacks, output
 
 struct VarsVizView: View {
+    @Environment(\.vizNames) private var name
     let vars: [KV]
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
@@ -212,7 +246,7 @@ struct VarsVizView: View {
             FlowLayout(spacing: 6) {
                 ForEach(vars, id: \.k) { v in
                     HStack(spacing: 5) {
-                        Text(v.k).foregroundStyle(VizPalette.label)
+                        Text(name(v.k)).foregroundStyle(VizPalette.label)
                         Text(v.v).fontWeight(.bold).foregroundStyle(.white).contentTransition(.numericText())
                     }
                     .font(.system(size: 13, design: .monospaced))
@@ -227,10 +261,11 @@ struct VarsVizView: View {
 }
 
 struct MapVizView: View {
+    @Environment(\.vizNames) private var name
     let m: MapViz
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
-            VizTitle(text: m.n)
+            VizTitle(text: name(m.n))
             if m.e.isEmpty {
                 Text("empty").font(.caption).foregroundStyle(VizPalette.label).italic()
             }
@@ -255,10 +290,11 @@ struct MapVizView: View {
 }
 
 struct StackVizView: View {
+    @Environment(\.vizNames) private var name
     let s: StackViz
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
-            VizTitle(text: s.n + (s.t == "stack" ? "  (top on the right)" : "  (front on the left)"))
+            VizTitle(text: name(s.n) + (s.t == "stack" ? "  (top on the right)" : "  (front on the left)"))
             HStack(spacing: 4) {
                 if s.v.isEmpty {
                     Text("empty").font(.caption).foregroundStyle(VizPalette.label).italic()
@@ -279,10 +315,11 @@ struct StackVizView: View {
 }
 
 struct OutVizView: View {
+    @Environment(\.vizNames) private var name
     let o: OutViz
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
-            VizTitle(text: o.n)
+            VizTitle(text: name(o.n))
             FlowLayout(spacing: 5) {
                 if o.v.isEmpty {
                     Text("[ ]").font(.system(size: 13, design: .monospaced)).foregroundStyle(VizPalette.label)
@@ -302,6 +339,7 @@ struct OutVizView: View {
 // MARK: - Grid / DP table
 
 struct GridVizView: View {
+    @Environment(\.vizNames) private var name
     let g: GridViz
     let isTable: Bool
     let width: CGFloat
@@ -311,7 +349,7 @@ struct GridVizView: View {
         let size = min(38, max(18, (width - (isTable ? 22 : 0)) / CGFloat(cols) - 2))
         let marks = Set((g.m ?? []).map { "\($0[0]),\($0[1])" })
         VStack(alignment: .leading, spacing: 4) {
-            VizTitle(text: g.n)
+            VizTitle(text: name(g.n))
             ScrollView(.horizontal, showsIndicators: false) {
                 VStack(alignment: .leading, spacing: 2) {
                     if isTable && g.v.count > 1 {
@@ -337,7 +375,7 @@ struct GridVizView: View {
             if let ps = g.p, !ps.isEmpty {
                 HStack(spacing: 10) {
                     ForEach(ps, id: \.l) { p in
-                        Label("\(p.l) (\(p.r), \(p.c))", systemImage: "scope")
+                        Label("\(name(p.l)) (\(p.r), \(p.c))", systemImage: "scope")
                             .font(.caption2.weight(.semibold))
                             .foregroundStyle(VizPalette.pointer(p.l))
                     }
@@ -374,6 +412,7 @@ struct GridVizView: View {
 // MARK: - Linked list
 
 struct LinkedVizView: View {
+    @Environment(\.vizNames) private var name
     let l: LinkedViz
     private let node: CGFloat = 38
     private let hgap: CGFloat = 30
@@ -412,7 +451,7 @@ struct LinkedVizView: View {
                             .position(center(n))
                     }
                     ForEach(labels(byId), id: \.label) { item in
-                        Text(item.label)
+                        Text(name(item.label))
                             .font(.system(size: 10, weight: .heavy, design: .rounded))
                             .foregroundStyle(VizPalette.pointer(item.label))
                             .fixedSize()
@@ -491,6 +530,7 @@ struct LinkedVizView: View {
 // MARK: - Tree
 
 struct TreeVizView: View {
+    @Environment(\.vizNames) private var name
     let t: TreeViz
     let width: CGFloat
 
@@ -536,7 +576,7 @@ struct TreeVizView: View {
                             .overlay(Circle().stroke(ptr.map { VizPalette.pointer($0.l) } ?? Color.white.opacity(0.3), lineWidth: ptr == nil ? 1 : 3))
                             .overlay(alignment: .top) {
                                 if let ptr {
-                                    Text(ptr.l)
+                                    Text(name(ptr.l))
                                         .font(.system(size: 9, weight: .heavy, design: .rounded))
                                         .foregroundStyle(VizPalette.pointer(ptr.l))
                                         .fixedSize()
@@ -557,15 +597,16 @@ struct TreeVizView: View {
 struct GraphVizView: View {
     let g: GraphViz
     let width: CGFloat
+    var height: CGFloat? = nil
 
     var body: some View {
         let n = max(g.nodes.count, 1)
-        let size = width
-        let radius = size / 2 - 26
-        let c = CGPoint(x: size / 2, y: size / 2)
+        let h = height ?? width
+        let rx = width / 2 - 26, ry = h / 2 - 22
+        let c = CGPoint(x: width / 2, y: h / 2)
         let pos: [String: CGPoint] = Dictionary(g.nodes.enumerated().map { i, k in
             let ang = Double(i) / Double(n) * 2 * Double.pi - Double.pi / 2
-            return (k, CGPoint(x: c.x + radius * CGFloat(cos(ang)), y: c.y + radius * CGFloat(sin(ang))))
+            return (k, CGPoint(x: c.x + rx * CGFloat(cos(ang)), y: c.y + ry * CGFloat(sin(ang))))
         }, uniquingKeysWith: { a, _ in a })
         let visited = Set(g.vis ?? [])
         VStack(alignment: .leading, spacing: 4) {
@@ -604,7 +645,7 @@ struct GraphVizView: View {
                         .position(pos[k] ?? c)
                 }
             }
-            .frame(width: size, height: size)
+            .frame(width: width, height: h)
         }
     }
 }
@@ -612,6 +653,7 @@ struct GraphVizView: View {
 // MARK: - Intervals & bits
 
 struct IntervalsVizView: View {
+    @Environment(\.vizNames) private var name
     let rows: [IntervalRow]
     let width: CGFloat
 
@@ -624,7 +666,7 @@ struct IntervalsVizView: View {
         VStack(alignment: .leading, spacing: 10) {
             ForEach(Array(rows.enumerated()), id: \.offset) { ri, row in
                 VStack(alignment: .leading, spacing: 4) {
-                    VizTitle(text: row.n)
+                    VizTitle(text: name(row.n))
                     ZStack(alignment: .leading) {
                         Rectangle().fill(Color.white.opacity(0.1)).frame(width: usable, height: 1).offset(y: 10)
                         ForEach(Array(row.v.enumerated()), id: \.offset) { i, iv in
@@ -648,13 +690,14 @@ struct IntervalsVizView: View {
 }
 
 struct BitsVizView: View {
+    @Environment(\.vizNames) private var name
     let rows: [BitsRow]
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
             VizTitle(text: "bits")
             ForEach(rows, id: \.k) { row in
                 HStack(spacing: 6) {
-                    Text("\(row.k) = \(row.v)").font(.system(size: 12, design: .monospaced)).foregroundStyle(VizPalette.label).frame(width: 90, alignment: .leading)
+                    Text("\(name(row.k)) = \(row.v)").font(.system(size: 12, design: .monospaced)).foregroundStyle(VizPalette.label).frame(width: 90, alignment: .leading)
                     HStack(spacing: 2) {
                         ForEach(Array(row.b.enumerated()), id: \.offset) { _, ch in
                             Text(String(ch))

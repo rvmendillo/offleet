@@ -190,7 +190,7 @@ problem(
         def fewest_coins(coins, amount):
             best = [0] + [amount + 1] * amount
             for a in range(1, amount + 1):
-                best[a] = min([best[a - c] + 1 for c in coins if c <= a] + [amount + 1])  #> Amount {a} needs {best[a] if best[a] <= amount else "infinitely many"} coins at best.
+                best[a] = min([best[a - c] + 1 for c in coins if c <= a] + [amount + 1])  #> Amount {a} needs {plural(best[a], "coin") if best[a] <= amount else "infinitely many coins"} at best.
             return best[amount] if best[amount] <= amount else -1
         ''',
         java='''

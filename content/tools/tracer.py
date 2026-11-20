@@ -494,12 +494,35 @@ HELPERS = {"q": _q, "lst": _lst, "yn": _yn, "plural": _plural, "fv": fv, "chain"
 
 
 # ------------------------------------------------------------ the tracer
+def comprehension_spans(src):
+    """Source spans of list/set/dict comprehensions. Python 3.12+ runs these inline in the enclosing frame (PEP 709),
+    so each of their iterations fires another "line" event on the statement that is still running."""
+    return [(n.lineno, n.col_offset, n.end_lineno, n.end_col_offset) for n in ast.walk(ast.parse(src))
+            if isinstance(n, (ast.ListComp, ast.SetComp, ast.DictComp))]
+
+
 class _Tracer:
-    def __init__(self, marks, ranges, spec, g, max_frames):
+    def __init__(self, marks, ranges, spec, g, max_frames, comp_spans=()):
         self.marks, self.ranges, self.spec, self.g = marks, ranges, spec, g
         self.frames, self.pending = [], {}
         self.max_frames = max_frames
         self.seen_ok = set()
+        self.comp_spans = list(comp_spans)
+        self.comp_lines = {ln for s in self.comp_spans for ln in range(s[0], s[2] + 1)}
+        self._positions = {}
+
+    def _in_comprehension(self, frame):
+        """True when a "line" event is an inlined comprehension looping back, not the start of a statement."""
+        if frame.f_lineno not in self.comp_lines or not hasattr(frame.f_code, "co_positions"):
+            return False
+        pos = self._positions.get(frame.f_code)
+        if pos is None:
+            pos = self._positions[frame.f_code] = list(frame.f_code.co_positions())
+        i = frame.f_lasti // 2
+        if not 0 <= i < len(pos) or pos[i][0] is None or pos[i][2] is None:
+            return False
+        at = (pos[i][0], pos[i][2])
+        return any((s[0], s[1]) <= at < (s[2], s[3]) for s in self.comp_spans)
 
     def global_trace(self, frame, event, arg):
         if frame.f_code.co_filename != FILENAME:
@@ -515,6 +538,8 @@ class _Tracer:
 
     def local_trace(self, frame, event, arg):
         if event == "line":
+            if self._in_comprehension(frame):
+                return self.local_trace
             self._resolve(frame, frame.f_lineno, None, False)
             ln = frame.f_lineno
             # lambdas / comprehensions / generator expressions on a narrated line must not trigger it themselves
@@ -581,7 +606,7 @@ def trace(code: str, spec: dict, demo_args, jtypes, design=False, max_frames=600
     reset_registries()
     ns = make_namespace()
     exec(compile(disp, FILENAME, "exec"), ns)
-    tr = _Tracer(marks, ranges, spec or {}, ns, max_frames)
+    tr = _Tracer(marks, ranges, spec or {}, ns, max_frames, comprehension_spans(disp))
     ret = None
     sys.settrace(tr.global_trace)
     try:

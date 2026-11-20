@@ -58,6 +58,8 @@ struct Approach: Codable, Identifiable, Hashable {
     let idea: String
     let why: String?
     let code: [CodeFile]
+    /// Visual labels that the Java solution spells differently from the Python one (e.g. "min_len": "minLen").
+    let jn: [String: String]?
 
     func code(for lang: String) -> CodeFile? { code.first { $0.lang == lang } }
     var languages: [String] { code.map(\.lang) }

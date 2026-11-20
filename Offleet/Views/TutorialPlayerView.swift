@@ -148,6 +148,7 @@ struct TutorialPlayerView: View {
             }
             .padding(10)
         }
+        .environment(\.vizNames, VizNames(map: lang == "java" ? (approach?.jn ?? [:]) : [:]))
         .animation(.easeInOut(duration: 0.3), value: player.index)
     }
 
@@ -175,7 +176,8 @@ struct TutorialPlayerView: View {
             }
             .onChange(of: line) { _, l in
                 guard let l else { return }
-                withAnimation(.easeInOut(duration: 0.3)) { proxy.scrollTo(l, anchor: .center) }
+                // leading x keeps the gutter and the start of long lines in view; only the vertical position is centred
+                withAnimation(.easeInOut(duration: 0.3)) { proxy.scrollTo(l, anchor: UnitPoint(x: 0, y: 0.5)) }
             }
         }
         .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))

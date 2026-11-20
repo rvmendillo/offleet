@@ -461,6 +461,48 @@ def dsl_pattern_name(pid):
     return _PAT[pid][1] if pid in _PAT else pid
 
 
+IDENT = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
+JAVA_SYNONYMS = {"total": "sum"}  # Python avoids shadowing built-ins; the Java solutions use the plain name
+
+
+def _viz_labels(x, out):
+    if isinstance(x, dict):
+        for k, v in x.items():
+            out.add(k)
+            _viz_labels(v, out)
+    elif isinstance(x, (list, tuple)):
+        for v in x:
+            _viz_labels(v, out)
+    elif isinstance(x, str) and IDENT.match(x):
+        out.add(x)
+
+
+def _camel(name):
+    head, *rest = name.split("_")
+    return head + "".join(w[:1].upper() + w[1:] for w in rest) if head and rest else name
+
+
+def java_names(a):
+    """Tutorial visuals are labelled with the Python solution's names. Map the ones the Java solution spells
+    differently (min_len -> minLen, total -> sum) so Java viewers see their own code's variables."""
+    if not a.get("viz") or not a.get("java_disp"):
+        return {}
+    words = set(re.findall(r"[A-Za-z_][A-Za-z0-9_]*", a["java_disp"]))
+    labels = set()
+    _viz_labels(a["viz"], labels)
+    out = {}
+    for label in sorted(labels - words):
+        alias = (a.get("java_names") or {}).get(label)
+        if alias is None:
+            if _camel(label) != label and _camel(label) in words:
+                alias = _camel(label)
+            elif JAVA_SYNONYMS.get(label) in words:
+                alias = JAVA_SYNONYMS[label]
+        if alias:
+            out[label] = alias
+    return out
+
+
 def export_problem(p):
     out = {
         "id": p["id"], "n": p["num"], "title": p["title"], "diff": p["difficulty"], "cat": p["category"],
@@ -492,6 +534,9 @@ def export_problem(p):
               "idea": a["idea"], "code": code}
         if a.get("why"):
             ea["why"] = a["why"]
+        jn = java_names(a)
+        if jn:
+            ea["jn"] = jn
         out["approaches"].append(ea)
     return out
 

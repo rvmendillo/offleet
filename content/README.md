@@ -91,6 +91,13 @@ viz(
 )
 ```
 
+Labels are the Python names. When Java is on screen the app swaps in the Java solution's spelling: the build maps
+`snake_case` labels to their `camelCase` twin in the Java code, and `total` to `sum`. For any other difference,
+pass `java_names={"py_label": "javaName"}` to `approach(...)`.
+
+Narrated lines may contain list, set or dict comprehensions. Python 3.12+ runs them inline, so the tracer ignores
+the comprehension looping back and narrates once, after the whole statement.
+
 ## Framework problem (Spring Boot / Angular)
 
 ```python

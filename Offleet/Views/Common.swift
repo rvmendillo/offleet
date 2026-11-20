@@ -189,10 +189,11 @@ struct CodeView: View {
                 VStack(alignment: .leading, spacing: 0) {
                     ForEach(Array(lines.enumerated()), id: \.offset) { i, line in
                         CodeLine(number: i + 1, text: line, fontSize: fontSize, active: highlight == i + 1)
+                            .padding(.leading, 8)
                             .id(i + 1)
                     }
                 }
-                .padding(.horizontal, 8).padding(.bottom, 12).padding(.top, showHeader ? 0 : 10)
+                .padding(.trailing, 8).padding(.bottom, 12).padding(.top, showHeader ? 0 : 10)
             }
         }
         .background(RoundedRectangle(cornerRadius: 14, style: .continuous).fill(CodeTheme.background))
