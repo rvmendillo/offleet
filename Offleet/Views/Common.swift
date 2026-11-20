@@ -12,6 +12,9 @@ enum Route: Hashable {
     case quiz(String)
     case patternQuiz
     case flashcards(String)
+    case path(String)
+    case mock(String)
+    case review
 }
 
 struct RouteView: View {
@@ -26,6 +29,9 @@ struct RouteView: View {
         case .quiz(let id): QuizView(subjectId: id)
         case .patternQuiz: PatternQuizView()
         case .flashcards(let id): FlashcardsView(subjectId: id)
+        case .path(let id): CareerPathView(pathId: id)
+        case .mock(let focus): MockInterviewView(focus: focus)
+        case .review: ReviewQueueView()
         }
     }
 }

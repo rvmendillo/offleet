@@ -23,6 +23,17 @@ struct SettingsView: View {
                     .padding(.vertical, 4)
                 }
 
+                Section("Your progress") {
+                    StatsPanel()
+                        .padding(.vertical, 4)
+                    NavigationLink(value: Route.review) {
+                        Label("Review queue (\(progress.dueKeys.count) due)", systemImage: "arrow.triangle.2.circlepath")
+                    }
+                    NavigationLink(value: Route.mock("any")) {
+                        Label("Mock interview", systemImage: "timer")
+                    }
+                }
+
                 Section("Your tutor") {
                     ScrollView(.horizontal, showsIndicators: false) {
                         HStack(spacing: 14) {
@@ -96,6 +107,7 @@ struct SettingsView: View {
                 }
             }
             .navigationTitle("Me")
+            .routes()
             .confirmationDialog("Reset all progress?", isPresented: $confirmReset, titleVisibility: .visible) {
                 Button("Reset", role: .destructive) { progress.resetAll() }
             }

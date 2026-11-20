@@ -5,11 +5,42 @@ struct ReviewerHomeView: View {
     @EnvironmentObject private var progress: ProgressStore
     @EnvironmentObject private var settings: AppSettings
     @State private var path = DebugLaunch.learnPath
+    @State private var query = ""
+
+    private var results: [(Subject, Bite)] {
+        let q = query.lowercased().trimmingCharacters(in: .whitespaces)
+        guard !q.isEmpty else { return [] }
+        return content.subjects.flatMap { s in s.allBites.map { (s, $0) } }
+            .filter { $0.1.title.lowercased().contains(q) || $0.1.tldr.lowercased().contains(q) }
+    }
 
     var body: some View {
         NavigationStack(path: $path) {
             ScrollView {
                 VStack(alignment: .leading, spacing: 18) {
+                    if !query.isEmpty {
+                        ForEach(Array(results.prefix(60).enumerated()), id: \.offset) { _, pair in
+                            NavigationLink(value: Route.bite(pair.1.id)) {
+                                HStack(spacing: 10) {
+                                    Image(systemName: pair.0.icon).foregroundStyle(Color(hex: pair.0.color)).frame(width: 24)
+                                    VStack(alignment: .leading, spacing: 2) {
+                                        Text(pair.1.title).font(.subheadline.weight(.semibold))
+                                        Text(pair.1.tldr).font(.caption).foregroundStyle(.secondary).lineLimit(2)
+                                    }
+                                    Spacer(minLength: 0)
+                                }
+                                .card(padding: 12)
+                            }
+                            .buttonStyle(.plain)
+                        }
+                        if results.isEmpty {
+                            ContentUnavailableView.search(text: query)
+                        }
+                    }
+                    if query.isEmpty && !content.paths.isEmpty {
+                        SectionHeader(title: "Career paths", subtitle: "Roadmaps for your next role")
+                        CareerPathCards()
+                    }
                     HStack(spacing: 14) {
                         PresenterView(presenter: settings.presenter, size: 74, owner: "none")
                         VStack(alignment: .leading, spacing: 4) {
@@ -47,6 +78,7 @@ struct ReviewerHomeView: View {
             }
             .background(Color(uiColor: .systemGroupedBackground))
             .navigationTitle("Learn")
+            .searchable(text: $query, prompt: "Search every bite")
             .routes()
             .miniPlayerInset()
         }
@@ -176,6 +208,17 @@ struct BiteDetailView: View {
                         }
                     }
                     .card()
+                    if let flows = b.flow, !flows.isEmpty {
+                        VStack(alignment: .leading, spacing: 10) {
+                            Label("Architecture flow", systemImage: "point.3.connected.trianglepath.dotted")
+                                .font(.caption.weight(.bold)).foregroundStyle(.secondary)
+                            ForEach(Array(flows.enumerated()), id: \.offset) { _, flow in
+                                FlowChain(text: flow, color: color)
+                            }
+                        }
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .card()
+                    }
                     if let f = b.formula {
                         VStack(alignment: .leading, spacing: 6) {
                             Label("Formula", systemImage: "function").font(.caption.weight(.bold)).foregroundStyle(.secondary)
@@ -441,5 +484,30 @@ struct QuizView: View {
         if i == q.a { return Brand.mint.opacity(0.25) }
         if i == picked { return Color.red.opacity(0.2) }
         return Color(uiColor: .secondarySystemGroupedBackground)
+    }
+}
+
+
+/// Renders "A → B → C" as boxes connected by arrows, wrapping onto new lines.
+struct FlowChain: View {
+    let text: String
+    let color: Color
+
+    var body: some View {
+        let parts = text.components(separatedBy: "→").map { $0.trimmingCharacters(in: .whitespaces) }.filter { !$0.isEmpty }
+        FlowLayout(spacing: 4) {
+            ForEach(Array(parts.enumerated()), id: \.offset) { i, part in
+                HStack(spacing: 4) {
+                    Text(part)
+                        .font(.caption.weight(.semibold))
+                        .padding(.horizontal, 10).padding(.vertical, 7)
+                        .background(RoundedRectangle(cornerRadius: 8).fill(color.opacity(0.14)))
+                        .overlay(RoundedRectangle(cornerRadius: 8).stroke(color.opacity(0.5), lineWidth: 1))
+                    if i < parts.count - 1 {
+                        Image(systemName: "arrow.right").font(.caption2.weight(.heavy)).foregroundStyle(color)
+                    }
+                }
+            }
+        }
     }
 }

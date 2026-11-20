@@ -27,6 +27,25 @@ struct HomeView: View {
                         }
                         .buttonStyle(.plain)
                     }
+                    if !progress.dueKeys.isEmpty {
+                        NavigationLink(value: Route.review) {
+                            HStack(spacing: 12) {
+                                Image(systemName: "arrow.triangle.2.circlepath.circle.fill").font(.largeTitle).foregroundStyle(Brand.violet)
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text("\(progress.dueKeys.count) reviews due today").font(.headline)
+                                    Text("Spaced repetition keeps patterns fresh").font(.caption).foregroundStyle(.secondary)
+                                }
+                                Spacer()
+                                Image(systemName: "chevron.right").foregroundStyle(.tertiary)
+                            }
+                            .card()
+                        }
+                        .buttonStyle(.plain)
+                    }
+                    if !content.paths.isEmpty {
+                        SectionHeader(title: "Career paths", subtitle: "Level up to AI engineer or senior engineer")
+                        CareerPathCards()
+                    }
                     SectionHeader(title: "Study paths", subtitle: "Sliding Window and Two Pointers first, then everything else")
                     ScrollView(.horizontal, showsIndicators: false) {
                         HStack(spacing: 12) {
@@ -80,7 +99,7 @@ struct HomeView: View {
     }
 
     private var featuredTracks: [Track] {
-        let order = ["pat-sliding-window", "pat-two-pointers", "starter", "pat-spring-boot", "pat-angular"]
+        let order = ["pat-sliding-window", "pat-two-pointers", "cat-ai-engineering", "cat-system-design", "starter", "pat-spring-boot", "pat-angular"]
         let first = order.compactMap { content.track($0) }
         return first
     }
@@ -148,15 +167,27 @@ struct HomeView: View {
     }
 
     private var quickActions: some View {
-        HStack(spacing: 10) {
-            NavigationLink(value: Route.patternQuiz) {
-                action("Pattern quiz", "Spot the right technique", "puzzlepiece.extension.fill", Brand.indigo)
+        VStack(spacing: 10) {
+            HStack(spacing: 10) {
+                NavigationLink(value: Route.mock("any")) {
+                    action("Mock interview", "Timed, with a checklist", "timer", Color(hex: "#F97316"))
+                }
+                .buttonStyle(.plain)
+                NavigationLink(value: Route.review) {
+                    action("Review", "\(progress.dueKeys.count) due today", "arrow.triangle.2.circlepath", Brand.violet)
+                }
+                .buttonStyle(.plain)
             }
-            .buttonStyle(.plain)
-            Button { tab = .listen } label: {
-                action("Audiobooks", "Learn hands-free", "headphones", Brand.cyan)
+            HStack(spacing: 10) {
+                NavigationLink(value: Route.patternQuiz) {
+                    action("Pattern quiz", "Spot the right technique", "puzzlepiece.extension.fill", Brand.indigo)
+                }
+                .buttonStyle(.plain)
+                Button { tab = .listen } label: {
+                    action("Audiobooks", "Learn hands-free", "headphones", Brand.cyan)
+                }
+                .buttonStyle(.plain)
             }
-            .buttonStyle(.plain)
         }
     }
 

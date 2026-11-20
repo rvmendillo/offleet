@@ -30,6 +30,6 @@ struct ValidateContent {
         }
         let bites = c.subjects.reduce(0) { $0 + $1.allBites.count }
         let chapters = c.books.reduce(0) { $0 + $1.chapters.count }
-        print("OK problems=\(problems) frames=\(frames) subjects=\(c.subjects.count) bites=\(bites) books=\(c.books.count) chapters=\(chapters) tracks=\(c.tracks.count)")
+        print("OK problems=\(problems) frames=\(frames) subjects=\(c.subjects.count) bites=\(bites) books=\(c.books.count) chapters=\(chapters) tracks=\(c.tracks.count) paths=\(c.paths.count)")
     }
 }

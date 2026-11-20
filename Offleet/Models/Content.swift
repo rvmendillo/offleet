@@ -35,7 +35,7 @@ struct Problem: Codable, Identifiable, Hashable {
 
     var hasSlidingWindow: Bool { patterns.contains("sliding-window") }
     var hasTwoPointers: Bool { patterns.contains("two-pointers") || patterns.contains("fast-slow") }
-    var isAlgorithm: Bool { cat == "algorithms" }
+    var isAlgorithm: Bool { ["algorithms", "ai-engineering", "system-design"].contains(cat) }
 }
 
 struct Example: Codable, Hashable {
@@ -207,6 +207,7 @@ struct Bite: Codable, Identifiable, Hashable {
     let tip: String?
     let quiz: Quiz?
     let say: String
+    let flow: [String]?
 }
 
 struct Quiz: Codable, Hashable {
@@ -255,6 +256,32 @@ struct Track: Codable, Identifiable, Hashable {
     let problems: [String]
 }
 
+// MARK: - Career paths
+
+struct PathsFile: Codable { let paths: [CareerPath] }
+
+struct CareerPath: Codable, Identifiable, Hashable {
+    let id: String
+    let title: String
+    let subtitle: String
+    let icon: String
+    let color: String
+    let blurb: String
+    let stages: [PathStage]
+}
+
+struct PathStage: Codable, Hashable {
+    let title: String
+    let blurb: String
+    let items: [PathItem]
+}
+
+struct PathItem: Codable, Hashable {
+    let kind: String
+    let id: String
+    let title: String?
+}
+
 // MARK: - Loading
 
 struct LoadedContent {
@@ -263,6 +290,7 @@ struct LoadedContent {
     var subjects: [Subject]
     var books: [Book]
     var tracks: [Track]
+    var paths: [CareerPath]
 }
 
 enum ContentLoader {
@@ -280,7 +308,9 @@ enum ContentLoader {
         let r = try decode(ReviewerFile.self, root.appendingPathComponent("reviewer.json"))
         let b = try decode(BooksFile.self, root.appendingPathComponent("books.json"))
         let t = try decode(TracksFile.self, root.appendingPathComponent("tracks.json"))
-        return LoadedContent(patterns: p.patterns, problems: p.problems, subjects: r.subjects, books: b.books, tracks: t.tracks)
+        let paths = try decode(PathsFile.self, root.appendingPathComponent("paths.json"))
+        return LoadedContent(patterns: p.patterns, problems: p.problems, subjects: r.subjects, books: b.books,
+                             tracks: t.tracks, paths: paths.paths)
     }
 
     static func tutorial(problemId: String, root: URL) -> [String: [Frame]] {

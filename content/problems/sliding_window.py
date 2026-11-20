@@ -1,8 +1,64 @@
-"""Sliding Window problems (original statements)."""
+"""Sliding Window problems (original statements).
+
+House style (the learner's preferred template): `left`/`right` pointers, add the element at `right` first,
+then shrink with `for (; <invalid>; <remove left>, left++)` in Java (a `while` loop in Python), and use an
+`n + 1` sentinel for "minimum length" answers.
+"""
 from dsl import problem, approach, viz
 
 # Window bounds that also work before the loop variable exists.
-R_OR = "locals().get('r', {d})"
+R_OR = "locals().get('right', {d})"
+
+problem(
+    id="shortest-sum-at-least",
+    title="Shortest Run Reaching a Target",
+    difficulty="Medium",
+    topics=["Array", "Sliding Window", "Prefix Sum"],
+    statement="""
+    Given positive integers `nums` and a positive number `s`, return the length of the shortest contiguous run whose
+    sum is **at least** `s`, or `0` if no run reaches it.
+    """,
+    examples=[([7, [2, 3, 1, 2, 4, 3]], 2, "[4, 3] sums to 7."), ([4, [1, 4, 4]], 1, None)],
+    tests=[([11, [1, 1, 1, 1, 1]], 0), ([15, [1, 2, 3, 4, 5]], 5), ([3, [3]], 1)],
+    constraints=["1 ≤ nums.length ≤ 10^5", "1 ≤ nums[i] ≤ 10^4"],
+    hints=["All numbers are positive, so growing the window always raises the sum.",
+           "Once the sum is big enough, shrink from the left as far as possible."],
+    approaches=[approach(
+        name="Sliding Window", pattern="sliding-window", time="O(n)", space="O(1)",
+        idea="""
+        This is the simplest sliding window template. Move `right` forward and add `nums[right]` to the sum first.
+
+        Then, while the sum is at least `s`, record the window length and shrink from the left: subtract `nums[left]` and move `left` forward. The sentinel `n + 1` means "no window found yet".
+        """,
+        why="right and left each move forward at most n times, so the nested loop is still linear.",
+        viz=viz(arr="nums", ptr={"left": "left", "right": "right"}, win=("left", R_OR.format(d="-1")), vars=["total", "s", "min_len"]),
+        py='''
+        def min_sub_array_len(s, nums):
+            total, min_len, left = 0, len(nums) + 1, 0
+            for right in range(len(nums)):
+                total += nums[right]  #> Add {nums[right]}. The window sum is {total}.
+                while total >= s:
+                    min_len = min(min_len, right - left + 1)  #> {total} reaches {s} with length {right - left + 1}. Shortest so far: {min_len}.
+                    total -= nums[left]
+                    left += 1  #> Shrink from the left. The sum drops to {total}.
+            return min_len if min_len <= len(nums) else 0
+        ''',
+        java='''
+        class Solution {
+            public int minSubArrayLen(int s, int[] nums) {
+                int sum = 0, minLen = nums.length + 1, left = 0;
+                for (int right = 0; right < nums.length; right++) {
+                    sum += nums[right]; //>
+                    for (; sum >= s; sum -= nums[left], left++) {
+                        minLen = Math.min(minLen, right - left + 1); //>2,3
+                    }
+                }
+                return minLen <= nums.length ? minLen : 0;
+            }
+        }
+        ''',
+    )],
+)
 
 problem(
     id="longest-unique-substring",
@@ -14,43 +70,80 @@ problem(
     """,
     examples=[(["abcabcbb"], 3, "\"abc\" has no repeats and nothing longer works."), (["bbbb"], 1, None)],
     tests=[([""], 0), (["pwwkew"], 3), (["abba"], 2), (["dvdf"], 3)],
-    constraints=["0 ≤ s.length ≤ 5·10^4"],
-    hints=["Keep a window with no repeats.", "When a repeat enters, jump the left edge past the previous copy."],
-    approaches=[approach(
-        name="Sliding Window", pattern="sliding-window", time="O(n)", space="O(k)",
-        idea="""
-        Keep a window from L to R that never contains a repeat, and remember the last index where each character was seen.
+    constraints=["0 ≤ s.length ≤ 5·10^4", "s contains ASCII characters"],
+    hints=["Keep a window with no repeats.", "When a repeat enters, shrink from the left until it's gone."],
+    approaches=[
+        approach(
+            name="Sliding Window", pattern="sliding-window", time="O(n)", space="O(1)",
+            idea="""
+            Count the characters inside the window. Add `s[right]` first. If it now appears twice, shrink from the left until that character's count is back to one.
 
-        When the new character at R was already seen inside the window, jump L just past that earlier copy. The window is valid again, so we update the best length.
-        """,
-        why="R visits every character once and L only moves forward, so the work is linear. The map holds at most one entry per distinct character, k.",
-        viz=viz(arr="s", ptr={"L": "l", "R": "r"}, win=("l", "r"), maps=[("last seen", "last")], vars=["best"]),
-        py='''
-        def longest_unique(s):
-            last, l, best = {}, 0, 0
-            for r, ch in enumerate(s):  #> R moves to index {r}, the letter {q(ch)}.
-                if last.get(ch, -1) >= l:
-                    l = last[ch] + 1  #> {q(ch)} is already in the window, so L jumps to index {l}.
-                last[ch] = r
-                best = max(best, r - l + 1)  #> The window is {q(s[l:r+1])}, length {r - l + 1}. Best so far: {best}.
-            return best
-        ''',
-        java='''
-        class Solution {
-            public int longestUnique(String s) {
-                Map<Character, Integer> last = new HashMap<>();
-                int l = 0, best = 0;
-                for (int r = 0; r < s.length(); r++) { //>
-                    char ch = s.charAt(r);
-                    if (last.getOrDefault(ch, -1) >= l) l = last.get(ch) + 1; //>
-                    last.put(ch, r);
-                    best = Math.max(best, r - l + 1); //>
+            The window never holds a repeat after shrinking, so its length is a candidate answer.
+            """,
+            why="Each character enters and leaves the window once; the count table has a fixed ASCII size.",
+            viz=viz(arr="s", ptr={"left": "left", "right": "right"}, win=("left", R_OR.format(d="-1")),
+                    maps=[("counts", "{k: v for k, v in count.items() if v}")], vars=["best"]),
+            py='''
+            def longest_unique(s):
+                count, best, left = {}, 0, 0
+                for right in range(len(s)):
+                    c = s[right]
+                    count[c] = count.get(c, 0) + 1  #> Add {q(c)}.
+                    while count[c] > 1:
+                        count[s[left]] -= 1
+                        left += 1  #> {q(c)} appears twice, so shrink: left moves to {left}.
+                    best = max(best, right - left + 1)  #> The window {q(s[left:right + 1])} has length {right - left + 1}. Best: {best}.
+                return best
+            ''',
+            java='''
+            class Solution {
+                public int longestUnique(String s) {
+                    int[] count = new int[128];
+                    int best = 0, left = 0;
+                    for (int right = 0; right < s.length(); right++) {
+                        char c = s.charAt(right);
+                        count[c]++; //>
+                        for (; count[c] > 1; left++) count[s.charAt(left)]--; //>
+                        best = Math.max(best, right - left + 1); //>
+                    }
+                    return best;
                 }
-                return best;
             }
-        }
-        ''',
-    )],
+            ''',
+        ),
+        approach(
+            name="Sliding Window with Jumps", pattern="sliding-window", time="O(n)", space="O(k)",
+            idea="""
+            Instead of shrinking one step at a time, remember the last index where each character was seen. When `s[right]` was seen inside the window, jump `left` just past that earlier copy in one move.
+            """,
+            viz=viz(arr="s", ptr={"left": "left", "right": "right"}, win=("left", R_OR.format(d="-1")), maps=[("last seen", "last")], vars=["best"]),
+            py='''
+            def longest_unique(s):
+                last, best, left = {}, 0, 0
+                for right in range(len(s)):
+                    if last.get(s[right], -1) >= left:
+                        left = last[s[right]] + 1  #> {q(s[right])} is already in the window, so left jumps to {left}.
+                    last[s[right]] = right
+                    best = max(best, right - left + 1)  #> The window {q(s[left:right + 1])} has length {right - left + 1}. Best: {best}.
+                return best
+            ''',
+            java='''
+            class Solution {
+                public int longestUnique(String s) {
+                    Map<Character, Integer> last = new HashMap<>();
+                    int best = 0, left = 0;
+                    for (int right = 0; right < s.length(); right++) {
+                        char c = s.charAt(right);
+                        if (last.getOrDefault(c, -1) >= left) left = last.get(c) + 1; //>
+                        last.put(c, right);
+                        best = Math.max(best, right - left + 1); //>
+                    }
+                    return best;
+                }
+            }
+            ''',
+        ),
+    ],
 )
 
 problem(
@@ -68,83 +161,33 @@ problem(
     approaches=[approach(
         name="Fixed Sliding Window", pattern="sliding-window", time="O(n)", space="O(1)",
         idea="""
-        Add up the first k numbers. To slide the window one step right, add the number that enters and subtract the number that leaves.
+        Same template with a fixed size: add `nums[right]` first. Once the window is longer than k, remove `nums[left]` and move `left`.
 
-        Each new window sum takes constant work, so we can check every window in one pass.
+        As soon as the window holds exactly k numbers, compare its sum with the best.
         """,
-        viz=viz(arr="nums", ptr={"R": "r"}, win=(R_OR.format(d="k - 1") + " - k + 1", R_OR.format(d="k - 1")), vars=["window", "best"]),
+        viz=viz(arr="nums", ptr={"left": "left", "right": "right"}, win=("left", R_OR.format(d="-1")), vars=["total", "best"]),
         py='''
         def best_window_sum(nums, k):
-            window = sum(nums[:k])  #> The first window adds up to {window}.
-            best = window
-            for r in range(k, len(nums)):
-                window += nums[r] - nums[r - k]  #> Slide right: add {nums[r]}, drop {nums[r - k]}. The sum is now {window}.
-                best = max(best, window)
+            total, best, left = 0, float("-inf"), 0
+            for right in range(len(nums)):
+                total += nums[right]  #> Add {nums[right]}. The window sum is {total}.
+                if right - left + 1 > k:
+                    total -= nums[left]
+                    left += 1  #> The window is longer than {k}, so drop the left value. Sum: {total}.
+                if right - left + 1 == k:
+                    best = max(best, total)
             return best  #> The best window sum is {best}.
         ''',
         java='''
         class Solution {
             public int bestWindowSum(int[] nums, int k) {
-                int window = 0;
-                for (int i = 0; i < k; i++) window += nums[i]; //>
-                int best = window;
-                for (int r = k; r < nums.length; r++) {
-                    window += nums[r] - nums[r - k]; //>
-                    best = Math.max(best, window);
+                int sum = 0, best = Integer.MIN_VALUE, left = 0;
+                for (int right = 0; right < nums.length; right++) {
+                    sum += nums[right]; //>
+                    for (; right - left + 1 > k; left++) sum -= nums[left]; //>
+                    if (right - left + 1 == k) best = Math.max(best, sum);
                 }
                 return best; //>
-            }
-        }
-        ''',
-    )],
-)
-
-problem(
-    id="shortest-sum-at-least",
-    title="Shortest Run Reaching a Target",
-    difficulty="Medium",
-    topics=["Array", "Sliding Window", "Prefix Sum"],
-    statement="""
-    Given positive integers `nums` and a positive `target`, return the length of the shortest contiguous run whose
-    sum is **at least** `target`, or `0` if no run reaches it.
-    """,
-    examples=[([7, [2, 3, 1, 2, 4, 3]], 2, "[4, 3] sums to 7."), ([4, [1, 4, 4]], 1, None)],
-    tests=[([11, [1, 1, 1, 1, 1]], 0), ([15, [1, 2, 3, 4, 5]], 5), ([3, [3]], 1)],
-    constraints=["1 ≤ nums.length ≤ 10^5", "1 ≤ nums[i] ≤ 10^4"],
-    hints=["All numbers are positive, so growing the window always raises the sum.",
-           "Once the sum is big enough, shrink from the left as far as possible."],
-    approaches=[approach(
-        name="Variable Sliding Window", pattern="sliding-window", time="O(n)", space="O(1)",
-        idea="""
-        Grow the window by moving R and adding numbers. As soon as the sum reaches the target, record the length, then shrink from the left to look for something shorter.
-
-        Because every number is positive, shrinking only lowers the sum, so we stop shrinking as soon as it falls below the target.
-        """,
-        why="R and L each move forward at most n times.",
-        viz=viz(arr="nums", ptr={"L": "l", "R": "r"}, win=("l", R_OR.format(d="-1")), vars=["total", "target", "best"]),
-        py='''
-        def shortest_at_least(target, nums):
-            l, total, best = 0, 0, float("inf")
-            for r, x in enumerate(nums):
-                total += x  #> Grow: add {x}. The window sum is {total}.
-                while total >= target:
-                    best = min(best, r - l + 1)  #> {total} reaches {target} with length {r - l + 1}. Best is {best}.
-                    total -= nums[l]
-                    l += 1  #> Shrink from the left. The sum drops to {total}.
-            return 0 if best == float("inf") else best
-        ''',
-        java='''
-        class Solution {
-            public int shortestAtLeast(int target, int[] nums) {
-                int l = 0, total = 0, best = Integer.MAX_VALUE;
-                for (int r = 0; r < nums.length; r++) {
-                    total += nums[r]; //>
-                    while (total >= target) {
-                        best = Math.min(best, r - l + 1); //>
-                        total -= nums[l++]; //>
-                    }
-                }
-                return best == Integer.MAX_VALUE ? 0 : best;
             }
         }
         ''',
@@ -167,32 +210,32 @@ problem(
     approaches=[approach(
         name="Sliding Window", pattern="sliding-window", time="O(n)", space="O(1)",
         idea="""
-        In a window, the letters we must change are all except the most common one. So a window is valid while its length minus the top count is at most k.
+        Inside a window, the letters we must change are all except the most common one. So a window is valid while its length minus the top count is at most k.
 
-        Grow the window with R. If it becomes invalid, slide L forward by one. The window never needs to shrink further, because only a bigger top count could give a longer answer.
+        Add `s[right]`, update the top count, and shrink from the left while the window needs more than k changes.
         """,
-        viz=viz(arr="s", ptr={"L": "l", "R": "r"}, win=("l", R_OR.format(d="-1")), maps=[("counts", "count")], vars=["top", "best"]),
+        viz=viz(arr="s", ptr={"left": "left", "right": "right"}, win=("left", R_OR.format(d="-1")), maps=[("counts", "count")], vars=["top", "best"]),
         py='''
         def longest_after_changes(s, k):
-            count, l, top, best = {}, 0, 0, 0
-            for r, ch in enumerate(s):
-                count[ch] = count.get(ch, 0) + 1
-                top = max(top, count[ch])  #> Add {q(ch)}. The most common letter appears {top} times.
-                if r - l + 1 - top > k:
-                    count[s[l]] -= 1
-                    l += 1  #> More than {k} changes needed, so L slides to {l}.
-                best = max(best, r - l + 1)
+            count, top, best, left = {}, 0, 0, 0
+            for right in range(len(s)):
+                count[s[right]] = count.get(s[right], 0) + 1
+                top = max(top, count[s[right]])  #> Add {q(s[right])}. The most common letter appears {top} times.
+                while right - left + 1 - top > k:
+                    count[s[left]] -= 1
+                    left += 1  #> More than {k} changes needed, so shrink: left moves to {left}.
+                best = max(best, right - left + 1)
             return best
         ''',
         java='''
         class Solution {
             public int longestAfterChanges(String s, int k) {
                 int[] count = new int[26];
-                int l = 0, top = 0, best = 0;
-                for (int r = 0; r < s.length(); r++) {
-                    top = Math.max(top, ++count[s.charAt(r) - 'A']); //>
-                    if (r - l + 1 - top > k) count[s.charAt(l++) - 'A']--; //>
-                    best = Math.max(best, r - l + 1);
+                int top = 0, best = 0, left = 0;
+                for (int right = 0; right < s.length(); right++) {
+                    top = Math.max(top, ++count[s.charAt(right) - 'A']); //>
+                    for (; right - left + 1 - top > k; left++) count[s.charAt(left) - 'A']--; //>
+                    best = Math.max(best, right - left + 1);
                 }
                 return best;
             }
@@ -217,37 +260,35 @@ problem(
     approaches=[approach(
         name="Fixed Sliding Window", pattern="sliding-window", time="O(n)", space="O(1)",
         idea="""
-        Count the letters of `p`. Then slide a window of the same length over `s`, keeping letter counts for the window: add the letter entering on the right and remove the one leaving on the left.
+        Count the letters of `p`. Slide a window of the same length over `s`: add `s[right]`, and once the window is too long, remove `s[left]` and move `left`.
 
-        Whenever the two count tables match, the window is a permutation of `p`.
+        Whenever the window's counts equal `p`'s counts, the window is a permutation of `p`.
         """,
         why="Comparing two 26-slot tables is constant work per step.",
-        viz=viz(arr="s", ptr={"R": "r"}, win=("max(0, " + R_OR.format(d="-1") + " - len(p) + 1)", R_OR.format(d="-1")), vars=["p"]),
+        viz=viz(arr="s", ptr={"left": "left", "right": "right"}, win=("left", R_OR.format(d="-1")), vars=["p"]),
         demo=["ab", "eidbaooo"],
         py='''
         def contains_permutation(p, s):
-            if len(p) > len(s):
-                return False
-            need, have = [0] * 26, [0] * 26
-            for ch in p:
-                need[ord(ch) - 97] += 1
-            for r, ch in enumerate(s):
-                have[ord(ch) - 97] += 1  #> Add {q(ch)} on the right.
-                if r >= len(p):
-                    have[ord(s[r - len(p)]) - 97] -= 1  #> Drop {q(s[r - len(p)])} on the left to keep the size at {len(p)}.
+            need, have, left = [0] * 26, [0] * 26, 0
+            for c in p:
+                need[ord(c) - 97] += 1
+            for right in range(len(s)):
+                have[ord(s[right]) - 97] += 1  #> Add {q(s[right])}.
+                if right - left + 1 > len(p):
+                    have[ord(s[left]) - 97] -= 1
+                    left += 1  #> Too long, so drop {q(s[left - 1])} from the left.
                 if have == need:
-                    return True  #> {q(s[r - len(p) + 1:r + 1])} has exactly the letters of {q(p)}!
+                    return True  #> {q(s[left:right + 1])} has exactly the letters of {q(p)}!
             return False
         ''',
         java='''
         class Solution {
             public boolean containsPermutation(String p, String s) {
-                if (p.length() > s.length()) return false;
                 int[] need = new int[26], have = new int[26];
                 for (char c : p.toCharArray()) need[c - 'a']++;
-                for (int r = 0; r < s.length(); r++) {
-                    have[s.charAt(r) - 'a']++; //>
-                    if (r >= p.length()) have[s.charAt(r - p.length()) - 'a']--; //>
+                for (int right = 0, left = 0; right < s.length(); right++) {
+                    have[s.charAt(right) - 'a']++; //>
+                    for (; right - left + 1 > p.length(); left++) have[s.charAt(left) - 'a']--; //>
                     if (Arrays.equals(have, need)) return true; //>
                 }
                 return false;
@@ -273,20 +314,21 @@ problem(
     approaches=[approach(
         name="Fixed Sliding Window", pattern="sliding-window", time="O(n)", space="O(1)",
         idea="""
-        Slide a window of length `len(p)` across `s` while maintaining letter counts. After each slide, if the window counts equal the counts of `p`, the window's start index is an answer.
+        Slide a window of length `len(p)` across `s` while maintaining letter counts. Each time the counts match `p`, the window's `left` index is an answer.
         """,
-        viz=viz(arr="s", ptr={"R": "r"}, win=("max(0, " + R_OR.format(d="-1") + " - len(p) + 1)", R_OR.format(d="-1")), out="res"),
+        viz=viz(arr="s", ptr={"left": "left", "right": "right"}, win=("left", R_OR.format(d="-1")), out="res"),
         py='''
         def anagram_starts(s, p):
-            need, have, res = [0] * 26, [0] * 26, []
-            for ch in p:
-                need[ord(ch) - 97] += 1
-            for r, ch in enumerate(s):
-                have[ord(ch) - 97] += 1
-                if r >= len(p):
-                    have[ord(s[r - len(p)]) - 97] -= 1
+            need, have, res, left = [0] * 26, [0] * 26, [], 0
+            for c in p:
+                need[ord(c) - 97] += 1
+            for right in range(len(s)):
+                have[ord(s[right]) - 97] += 1
+                if right - left + 1 > len(p):
+                    have[ord(s[left]) - 97] -= 1
+                    left += 1
                 if have == need:
-                    res.append(r - len(p) + 1)  #> {q(s[r - len(p) + 1:r + 1])} is an anagram, starting at {res[-1]}.
+                    res.append(left)  #> {q(s[left:right + 1])} is an anagram, starting at {left}.
             return res
         ''',
         java='''
@@ -295,10 +337,10 @@ problem(
                 int[] need = new int[26], have = new int[26];
                 List<Integer> res = new ArrayList<>();
                 for (char c : p.toCharArray()) need[c - 'a']++;
-                for (int r = 0; r < s.length(); r++) {
-                    have[s.charAt(r) - 'a']++;
-                    if (r >= p.length()) have[s.charAt(r - p.length()) - 'a']--;
-                    if (Arrays.equals(have, need)) res.add(r - p.length() + 1); //>
+                for (int right = 0, left = 0; right < s.length(); right++) {
+                    have[s.charAt(right) - 'a']++;
+                    for (; right - left + 1 > p.length(); left++) have[s.charAt(left) - 'a']--;
+                    if (Arrays.equals(have, need)) res.add(left); //>
                 }
                 return res;
             }
@@ -319,51 +361,50 @@ problem(
     examples=[(["ADOBECODEBANC", "ABC"], "BANC", None), (["a", "aa"], "", "s has only one 'a'.")],
     tests=[(["a", "a"], "a"), (["ab", "b"], "b"), (["aaflslflsldkalskaaa", "aaa"], "aaa")],
     constraints=["1 ≤ s.length, t.length ≤ 10^5"],
-    hints=["Track how many required characters are still missing.", "When nothing is missing, shrink from the left while it stays covered."],
+    hints=["Track how many required characters are still missing.", "While nothing is missing, record the window and shrink."],
     approaches=[approach(
         name="Sliding Window", pattern="sliding-window", time="O(n + m)", space="O(1)",
         idea="""
-        Keep a count of how many of each character we still need, and a single number `missing` for the total.
+        Exactly the minimum-window template: `need` counts what `t` still requires and `missing` counts how many characters are outstanding.
 
-        Move R to grow the window. When `missing` hits zero the window covers `t`: record it, then move L to shrink until a needed character drops out. Repeat until R reaches the end.
+        Add `s[right]`. While nothing is missing, record the window, then give back `s[left]` and move `left`; if that breaks the cover, the shrinking stops.
         """,
         why="Each character enters and leaves the window at most once; the count table has a fixed alphabet size.",
-        viz=viz(arr="s", ptr={"L": "l", "R": "r"}, win=("l", R_OR.format(d="-1")), vars=["missing", "best"]),
+        viz=viz(arr="s", ptr={"left": "left", "right": "right"}, win=("left", R_OR.format(d="-1")), vars=["missing", "min_len"]),
         demo=["ADOBECODEBANC", "ABC"],
         py='''
-        from collections import Counter
-
         def min_window(s, t):
-            need, missing = Counter(t), len(t)
-            l = start = 0
-            best = float("inf")
-            for r, ch in enumerate(s):
-                if need[ch] > 0:
-                    missing -= 1  #> {q(ch)} was needed. Still missing: {missing}.
-                need[ch] -= 1
+            need = {}
+            for c in t:
+                need[c] = need.get(c, 0) + 1
+            missing, min_len, start, left = len(t), len(s) + 1, 0, 0
+            for right in range(len(s)):
+                if need.get(s[right], 0) > 0:
+                    missing -= 1  #> {q(s[right])} was needed. Still missing: {missing}.
+                need[s[right]] = need.get(s[right], 0) - 1
                 while missing == 0:
-                    if r - l + 1 < best:
-                        best, start = r - l + 1, l  #> {q(s[l:r + 1])} covers everything. New best length: {best}.
-                    need[s[l]] += 1
-                    if need[s[l]] > 0:
-                        missing += 1  #> Dropping {q(s[l])} breaks the cover.
-                    l += 1
-            return "" if best == float("inf") else s[start:start + best]
+                    if right - left + 1 < min_len:
+                        min_len, start = right - left + 1, left  #> {q(s[left:right + 1])} covers everything. Shortest so far: {min_len}.
+                    need[s[left]] += 1
+                    if need[s[left]] > 0:
+                        missing += 1  #> Giving back {q(s[left])} breaks the cover.
+                    left += 1
+            return s[start:start + min_len] if min_len <= len(s) else ""
         ''',
         java='''
         class Solution {
             public String minWindow(String s, String t) {
                 int[] need = new int[128];
                 for (char c : t.toCharArray()) need[c]++;
-                int missing = t.length(), l = 0, start = 0, best = Integer.MAX_VALUE;
-                for (int r = 0; r < s.length(); r++) {
-                    if (need[s.charAt(r)]-- > 0) missing--; //>
-                    while (missing == 0) {
-                        if (r - l + 1 < best) { best = r - l + 1; start = l; } //>
-                        if (++need[s.charAt(l++)] > 0) missing++; //>
+                int missing = t.length(), minLen = s.length() + 1, start = 0, left = 0;
+                for (int right = 0; right < s.length(); right++) {
+                    if (need[s.charAt(right)]-- > 0) missing--; //>
+                    for (; missing == 0; left++) {
+                        if (right - left + 1 < minLen) { minLen = right - left + 1; start = left; } //>
+                        if (++need[s.charAt(left)] > 0) missing++; //>
                     }
                 }
-                return best == Integer.MAX_VALUE ? "" : s.substring(start, start + best);
+                return minLen <= s.length() ? s.substring(start, start + minLen) : "";
             }
         }
         ''',
@@ -386,31 +427,31 @@ problem(
     approaches=[approach(
         name="Sliding Window", pattern="sliding-window", time="O(n)", space="O(1)",
         idea="""
-        Rephrase: find the longest window that contains at most k zeros, because those zeros can all be flipped.
+        Rephrase: find the longest window with at most k zeros, because those zeros can all be flipped.
 
-        Grow with R and count zeros. Whenever there are more than k, move L right until a zero leaves the window.
+        Add `nums[right]` and count zeros. While there are more than k, shrink from the left.
         """,
-        viz=viz(arr="nums", ptr={"L": "l", "R": "r"}, win=("l", R_OR.format(d="-1")), vars=["zeros", "best"]),
+        viz=viz(arr="nums", ptr={"left": "left", "right": "right"}, win=("left", R_OR.format(d="-1")), vars=["zeros", "best"]),
         demo=[[1, 1, 0, 0, 1, 1, 1, 0, 1], 1],
         py='''
         def longest_ones(nums, k):
-            l = zeros = best = 0
-            for r, x in enumerate(nums):
-                zeros += x == 0  #> Add {x}. Zeros in the window: {zeros}.
+            zeros, best, left = 0, 0, 0
+            for right in range(len(nums)):
+                zeros += nums[right] == 0  #> Add {nums[right]}. Zeros in the window: {zeros}.
                 while zeros > k:
-                    zeros -= nums[l] == 0
-                    l += 1  #> Too many zeros, so L moves to {l}.
-                best = max(best, r - l + 1)
+                    zeros -= nums[left] == 0
+                    left += 1  #> Too many zeros, so shrink: left moves to {left}.
+                best = max(best, right - left + 1)
             return best
         ''',
         java='''
         class Solution {
             public int longestOnes(int[] nums, int k) {
-                int l = 0, zeros = 0, best = 0;
-                for (int r = 0; r < nums.length; r++) {
-                    if (nums[r] == 0) zeros++; //>
-                    while (zeros > k) if (nums[l++] == 0) zeros--; //>
-                    best = Math.max(best, r - l + 1);
+                int zeros = 0, best = 0, left = 0;
+                for (int right = 0; right < nums.length; right++) {
+                    if (nums[right] == 0) zeros++; //>
+                    for (; zeros > k; left++) if (nums[left] == 0) zeros--; //>
+                    best = Math.max(best, right - left + 1);
                 }
                 return best;
             }
@@ -438,35 +479,33 @@ problem(
         idea="""
         We want the longest window with at most two different kinds. Count kinds in the window with a map.
 
-        When a third kind appears, move L forward and decrease counts until one kind disappears completely.
+        Add `fruits[right]`; while three kinds are inside, shrink from the left until one kind disappears.
         """,
-        viz=viz(arr="fruits", ptr={"L": "l", "R": "r"}, win=("l", R_OR.format(d="-1")), maps=[("basket", "count")], vars=["best"]),
+        viz=viz(arr="fruits", ptr={"left": "left", "right": "right"}, win=("left", R_OR.format(d="-1")), maps=[("basket", "count")], vars=["best"]),
         demo=[[1, 2, 3, 2, 2]],
         py='''
         def two_baskets(fruits):
-            count, l, best = {}, 0, 0
-            for r, f in enumerate(fruits):
-                count[f] = count.get(f, 0) + 1  #> Pick fruit {f}. Kinds in the baskets: {len(count)}.
+            count, best, left = {}, 0, 0
+            for right in range(len(fruits)):
+                count[fruits[right]] = count.get(fruits[right], 0) + 1  #> Pick fruit {fruits[right]}. Kinds in the baskets: {len(count)}.
                 while len(count) > 2:
-                    count[fruits[l]] -= 1
-                    if count[fruits[l]] == 0:
-                        del count[fruits[l]]
-                    l += 1  #> Three kinds is too many, so L moves to {l}.
-                best = max(best, r - l + 1)
+                    count[fruits[left]] -= 1
+                    if count[fruits[left]] == 0:
+                        del count[fruits[left]]
+                    left += 1  #> Three kinds is too many, so shrink: left moves to {left}.
+                best = max(best, right - left + 1)
             return best
         ''',
         java='''
         class Solution {
             public int twoBaskets(int[] fruits) {
                 Map<Integer, Integer> count = new HashMap<>();
-                int l = 0, best = 0;
-                for (int r = 0; r < fruits.length; r++) {
-                    count.merge(fruits[r], 1, Integer::sum); //>
-                    while (count.size() > 2) {
-                        if (count.merge(fruits[l], -1, Integer::sum) == 0) count.remove(fruits[l]);
-                        l++; //>
-                    }
-                    best = Math.max(best, r - l + 1);
+                int best = 0, left = 0;
+                for (int right = 0; right < fruits.length; right++) {
+                    count.merge(fruits[right], 1, Integer::sum); //>
+                    for (; count.size() > 2; left++) //>
+                        if (count.merge(fruits[left], -1, Integer::sum) == 0) count.remove(fruits[left]);
+                    best = Math.max(best, right - left + 1);
                 }
                 return best;
             }
@@ -490,34 +529,32 @@ problem(
     approaches=[approach(
         name="Sliding Window", pattern="sliding-window", time="O(n)", space="O(k)",
         idea="""
-        Grow the window with R and count each character. If more than k distinct characters are inside, shrink from L until one of them disappears. Track the longest valid window.
+        Add `s[right]` to the counts. While more than k distinct characters are inside, shrink from the left until one of them disappears. Track the longest valid window.
         """,
-        viz=viz(arr="s", ptr={"L": "l", "R": "r"}, win=("l", R_OR.format(d="-1")), maps=[("counts", "count")], vars=["best"]),
+        viz=viz(arr="s", ptr={"left": "left", "right": "right"}, win=("left", R_OR.format(d="-1")), maps=[("counts", "count")], vars=["best"]),
         py='''
         def longest_k_distinct(s, k):
-            count, l, best = {}, 0, 0
-            for r, ch in enumerate(s):
-                count[ch] = count.get(ch, 0) + 1
+            count, best, left = {}, 0, 0
+            for right in range(len(s)):
+                count[s[right]] = count.get(s[right], 0) + 1
                 while len(count) > k:
-                    count[s[l]] -= 1
-                    if count[s[l]] == 0:
-                        del count[s[l]]
-                    l += 1  #> More than {k} letters, so shrink: L moves to {l}.
-                best = max(best, r - l + 1)  #> The window {q(s[l:r + 1])} is valid. Best: {best}.
+                    count[s[left]] -= 1
+                    if count[s[left]] == 0:
+                        del count[s[left]]
+                    left += 1  #> More than {k} letters, so shrink: left moves to {left}.
+                best = max(best, right - left + 1)  #> The window {q(s[left:right + 1])} is valid. Best: {best}.
             return best
         ''',
         java='''
         class Solution {
             public int longestKDistinct(String s, int k) {
                 Map<Character, Integer> count = new HashMap<>();
-                int l = 0, best = 0;
-                for (int r = 0; r < s.length(); r++) {
-                    count.merge(s.charAt(r), 1, Integer::sum);
-                    while (count.size() > k) {
-                        char c = s.charAt(l++);
-                        if (count.merge(c, -1, Integer::sum) == 0) count.remove(c); //>
-                    }
-                    best = Math.max(best, r - l + 1); //>
+                int best = 0, left = 0;
+                for (int right = 0; right < s.length(); right++) {
+                    count.merge(s.charAt(right), 1, Integer::sum);
+                    for (; count.size() > k; left++) //>
+                        if (count.merge(s.charAt(left), -1, Integer::sum) == 0) count.remove(s.charAt(left));
+                    best = Math.max(best, right - left + 1); //>
                 }
                 return best;
             }
@@ -538,39 +575,36 @@ problem(
     examples=[([[10, 5, 2, 6], 100], 8, None), ([[1, 2, 3], 0], 0, None)],
     tests=[([[1, 1, 1], 2], 6), ([[5], 5], 0), ([[2, 3, 4], 30], 6)],
     constraints=["1 ≤ nums.length ≤ 3·10^4", "1 ≤ nums[i] ≤ 1000", "0 ≤ k ≤ 10^6"],
-    hints=["If a window has a small product, so does every window ending at R inside it.",
-           "Each step adds r − l + 1 new subarrays."],
+    hints=["If a window has a small product, so does every window ending at right inside it.",
+           "Each step adds right − left + 1 new subarrays."],
     approaches=[approach(
         name="Sliding Window", pattern="sliding-window", time="O(n)", space="O(1)",
         idea="""
-        Keep the product of the window from L to R. When it reaches k, divide out numbers from the left until it is small again.
+        Multiply in `nums[right]`. While the product is at least k, divide out `nums[left]` and move `left`.
 
-        Then every subarray that ends at R and starts anywhere from L to R qualifies: that's r − l + 1 new ones.
+        Every subarray that ends at `right` and starts anywhere from `left` to `right` qualifies: that's right − left + 1 new ones.
         """,
-        viz=viz(arr="nums", ptr={"L": "l", "R": "r"}, win=("l", R_OR.format(d="-1")), vars=["prod", "count"]),
+        viz=viz(arr="nums", ptr={"left": "left", "right": "right"}, win=("left", R_OR.format(d="-1")), vars=["prod", "count"]),
         py='''
         def count_small_products(nums, k):
-            if k <= 1:
-                return 0
-            prod, l, count = 1, 0, 0
-            for r, x in enumerate(nums):
-                prod *= x
-                while prod >= k:
-                    prod //= nums[l]
-                    l += 1
-                count += r - l + 1  #> The window product is {prod}, adding {r - l + 1} subarrays. Total: {count}.
+            prod, count, left = 1, 0, 0
+            for right in range(len(nums)):
+                prod *= nums[right]
+                while prod >= k and left <= right:
+                    prod //= nums[left]
+                    left += 1
+                count += right - left + 1  #> The window product is {prod}, adding {right - left + 1} subarrays. Total: {count}.
             return count
         ''',
         java='''
         class Solution {
             public int countSmallProducts(int[] nums, int k) {
-                if (k <= 1) return 0;
                 long prod = 1;
-                int l = 0, count = 0;
-                for (int r = 0; r < nums.length; r++) {
-                    prod *= nums[r];
-                    while (prod >= k) prod /= nums[l++];
-                    count += r - l + 1; //>
+                int count = 0, left = 0;
+                for (int right = 0; right < nums.length; right++) {
+                    prod *= nums[right];
+                    for (; prod >= k && left <= right; left++) prod /= nums[left];
+                    count += right - left + 1; //>
                 }
                 return count;
             }
@@ -596,12 +630,12 @@ problem(
     approaches=[approach(
         name="Sliding Window + Monotonic Deque", pattern="sliding-window", time="O(n)", space="O(k)",
         idea="""
-        Keep a deque of indexes whose values are decreasing from front to back. The front is always the current window's maximum.
+        Keep a deque of indexes whose values decrease from front to back. The front is always the current window's maximum.
 
-        When a new value arrives, pop smaller values off the back: they can never win again. Pop the front if it slid out of the window.
+        When `nums[right]` arrives, pop smaller values off the back: they can never win again. Pop the front once it slides out of the window.
         """,
         why="Every index is pushed and popped at most once.",
-        viz=viz(arr="nums", ptr={"R": "r"}, win=("max(0, " + R_OR.format(d="-1") + " - k + 1)", R_OR.format(d="-1")),
+        viz=viz(arr="nums", ptr={"right": "right"}, win=("max(0, " + R_OR.format(d="-1") + " - k + 1)", R_OR.format(d="-1")),
                 queues=[("deque (indexes)", "dq")], out="res"),
         demo=[[1, 3, -1, -3, 5, 3, 6], 3],
         py='''
@@ -609,13 +643,13 @@ problem(
 
         def window_maxes(nums, k):
             dq, res = deque(), []
-            for r, x in enumerate(nums):
-                while dq and nums[dq[-1]] <= x:
+            for right in range(len(nums)):
+                while dq and nums[dq[-1]] <= nums[right]:
                     dq.pop()
-                dq.append(r)  #> Add index {r} (value {x}). Smaller values behind it are gone for good.
-                if dq[0] <= r - k:
+                dq.append(right)  #> Add index {right} (value {nums[right]}). Smaller values behind it are gone for good.
+                if dq[0] <= right - k:
                     dq.popleft()  #> The front index slid out of the window.
-                if r >= k - 1:
+                if right >= k - 1:
                     res.append(nums[dq[0]])  #> The window maximum is {res[-1]}.
             return res
         ''',
@@ -624,11 +658,11 @@ problem(
             public int[] windowMaxes(int[] nums, int k) {
                 Deque<Integer> dq = new ArrayDeque<>();
                 int[] res = new int[nums.length - k + 1];
-                for (int r = 0; r < nums.length; r++) {
-                    while (!dq.isEmpty() && nums[dq.peekLast()] <= nums[r]) dq.pollLast();
-                    dq.addLast(r); //>
-                    if (dq.peekFirst() <= r - k) dq.pollFirst(); //>
-                    if (r >= k - 1) res[r - k + 1] = nums[dq.peekFirst()]; //>
+                for (int right = 0; right < nums.length; right++) {
+                    while (!dq.isEmpty() && nums[dq.peekLast()] <= nums[right]) dq.pollLast();
+                    dq.addLast(right); //>
+                    if (dq.peekFirst() <= right - k) dq.pollFirst(); //>
+                    if (right >= k - 1) res[right - k + 1] = nums[dq.peekFirst()]; //>
                 }
                 return res;
             }
@@ -652,30 +686,30 @@ problem(
     constraints=["1 ≤ prices.length ≤ 10^5"],
     hints=["Track the cheapest buying day seen so far."],
     approaches=[approach(
-        name="Two Pointers (buy & sell)", pattern="sliding-window", time="O(n)", space="O(1)",
+        name="Sliding Window (buy & sell)", pattern="sliding-window", time="O(n)", space="O(1)",
         idea="""
-        Keep a BUY pointer on the cheapest day so far and let SELL scan forward. Together they form a window from buy day to sell day.
+        `left` is the buy day and `right` is the sell day; together they form a window. Move `right` forward every day.
 
-        If SELL finds a cheaper price, it becomes the new buy day. Otherwise check the profit of selling today.
+        If `right` finds a cheaper price than `left`, the window restarts there: `left` jumps to `right`. Otherwise check the profit of the window.
         """,
-        viz=viz(arr="prices", ptr={"buy": "buy", "sell": "sell"}, win=("buy", "locals().get('sell', 0)"), vars=["best"]),
+        viz=viz(arr="prices", ptr={"buy": "left", "sell": "right"}, win=("left", R_OR.format(d="0")), vars=["best"]),
         py='''
         def max_profit(prices):
-            buy, best = 0, 0
-            for sell in range(1, len(prices)):
-                if prices[sell] < prices[buy]:
-                    buy = sell  #> {prices[sell]} is cheaper, so BUY moves to day {buy}.
+            best, left = 0, 0
+            for right in range(1, len(prices)):
+                if prices[right] < prices[left]:
+                    left = right  #> {prices[right]} is cheaper, so the buy day moves to day {left}.
                 else:
-                    best = max(best, prices[sell] - prices[buy])  #> Selling at {prices[sell]} earns {prices[sell] - prices[buy]}. Best: {best}.
+                    best = max(best, prices[right] - prices[left])  #> Selling at {prices[right]} earns {prices[right] - prices[left]}. Best: {best}.
             return best
         ''',
         java='''
         class Solution {
             public int maxProfit(int[] prices) {
-                int buy = 0, best = 0;
-                for (int sell = 1; sell < prices.length; sell++) {
-                    if (prices[sell] < prices[buy]) buy = sell; //>
-                    else best = Math.max(best, prices[sell] - prices[buy]); //>
+                int best = 0, left = 0;
+                for (int right = 1; right < prices.length; right++) {
+                    if (prices[right] < prices[left]) left = right; //>
+                    else best = Math.max(best, prices[right] - prices[left]); //>
                 }
                 return best;
             }
@@ -699,30 +733,31 @@ problem(
     approaches=[approach(
         name="Sliding Window Set", pattern="sliding-window", time="O(n)", space="O(k)",
         idea="""
-        Keep a set with the last k values. If the current value is already in the set, its twin is at most k positions back.
+        The window holds the last k values in a set. Before adding `nums[right]`, drop `nums[left]` if the window would be longer than k.
 
-        After adding the current value, remove the value that just fell out of the window.
+        If `nums[right]` is already in the window, its twin is at most k positions back.
         """,
-        viz=viz(arr="nums", ptr={"R": "r"}, maps=[("window", "window")]),
+        viz=viz(arr="nums", ptr={"left": "left", "right": "right"}, win=("left", R_OR.format(d="-1")), maps=[("window", "window")]),
         demo=[[1, 2, 3, 1, 2, 3], 2],
         py='''
         def nearby_duplicate(nums, k):
-            window = set()
-            for r, x in enumerate(nums):
-                if x in window:
-                    return True  #> {x} is already among the last {k} values!
-                window.add(x)
-                if len(window) > k:
-                    window.remove(nums[r - k])  #> Keep only the last {k} values: remove {nums[r - k]}.
+            window, left = set(), 0
+            for right in range(len(nums)):
+                if right - left > k:
+                    window.discard(nums[left])
+                    left += 1  #> Keep only the last {k} values: drop {nums[left - 1]}.
+                if nums[right] in window:
+                    return True  #> {nums[right]} is already in the window!
+                window.add(nums[right])
             return False
         ''',
         java='''
         class Solution {
             public boolean nearbyDuplicate(int[] nums, int k) {
                 Set<Integer> window = new HashSet<>();
-                for (int r = 0; r < nums.length; r++) {
-                    if (!window.add(nums[r])) return true; //>
-                    if (window.size() > k) window.remove(nums[r - k]); //>
+                for (int right = 0, left = 0; right < nums.length; right++) {
+                    for (; right - left > k; left++) window.remove(nums[left]); //>
+                    if (!window.add(nums[right])) return true; //>
                 }
                 return false;
             }
@@ -746,28 +781,29 @@ problem(
     approaches=[approach(
         name="Fixed Sliding Window", pattern="sliding-window", time="O(n)", space="O(1)",
         idea="""
-        Count vowels in the first k letters. Then slide one step at a time: add one if the entering letter is a vowel, subtract one if the leaving letter is a vowel, and keep the best count.
+        Add one if `s[right]` is a vowel. When the window grows past k, subtract one if `s[left]` was a vowel and move `left`. Keep the best count.
         """,
-        viz=viz(arr="s", ptr={"R": "r"}, win=("max(0, " + R_OR.format(d="-1") + " - k + 1)", R_OR.format(d="-1")), vars=["count", "best"]),
+        viz=viz(arr="s", ptr={"left": "left", "right": "right"}, win=("left", R_OR.format(d="-1")), vars=["count", "best"]),
         demo=["abciiidef", 3],
         py='''
         def most_vowels(s, k):
-            count = best = 0
-            for r, ch in enumerate(s):
-                count += ch in "aeiou"
-                if r >= k:
-                    count -= s[r - k] in "aeiou"
-                best = max(best, count)  #> The window {q(s[max(0, r - k + 1):r + 1])} has {count} vowels. Best: {best}.
+            count, best, left = 0, 0, 0
+            for right in range(len(s)):
+                count += s[right] in "aeiou"
+                if right - left + 1 > k:
+                    count -= s[left] in "aeiou"
+                    left += 1
+                best = max(best, count)  #> The window {q(s[left:right + 1])} has {count} vowels. Best: {best}.
             return best
         ''',
         java='''
         class Solution {
             public int mostVowels(String s, int k) {
                 String v = "aeiou";
-                int count = 0, best = 0;
-                for (int r = 0; r < s.length(); r++) {
-                    if (v.indexOf(s.charAt(r)) >= 0) count++;
-                    if (r >= k && v.indexOf(s.charAt(r - k)) >= 0) count--;
+                int count = 0, best = 0, left = 0;
+                for (int right = 0; right < s.length(); right++) {
+                    if (v.indexOf(s.charAt(right)) >= 0) count++;
+                    for (; right - left + 1 > k; left++) if (v.indexOf(s.charAt(left)) >= 0) count--;
                     best = Math.max(best, count); //>
                 }
                 return best;
@@ -793,29 +829,29 @@ problem(
     approaches=[approach(
         name="Sliding Window (Kadane)", pattern="sliding-window", time="O(n)", space="O(1)",
         idea="""
-        Grow a window to the right and keep its sum. If the sum before adding the next number is negative, that prefix only drags things down, so restart the window at the current number.
+        Grow the window to the right and keep its sum. If the sum before adding `nums[right]` is negative, that prefix only drags things down, so restart the window: `left` jumps to `right`.
 
         The best window sum seen at any point is the answer. This is Kadane's algorithm seen as a sliding window.
         """,
-        viz=viz(arr="nums", ptr={"L": "l", "R": "r"}, win=("l", R_OR.format(d="-1")), vars=["cur", "best"]),
+        viz=viz(arr="nums", ptr={"left": "left", "right": "right"}, win=("left", R_OR.format(d="-1")), vars=["total", "best"]),
         py='''
         def best_contiguous(nums):
-            best, cur, l = nums[0], 0, 0
-            for r, x in enumerate(nums):
-                if cur < 0:
-                    cur, l = 0, r  #> The window sum went negative, so restart the window at index {r}.
-                cur += x  #> Add {x}. The window sum is {cur}.
-                best = max(best, cur)
+            total, best, left = 0, nums[0], 0
+            for right in range(len(nums)):
+                if total < 0:
+                    total, left = 0, right  #> The window sum went negative, so restart the window at index {right}.
+                total += nums[right]  #> Add {nums[right]}. The window sum is {total}.
+                best = max(best, total)
             return best
         ''',
         java='''
         class Solution {
             public int bestContiguous(int[] nums) {
-                int best = nums[0], cur = 0;
-                for (int x : nums) {
-                    if (cur < 0) cur = 0; //>
-                    cur += x; //>
-                    best = Math.max(best, cur);
+                int sum = 0, best = nums[0];
+                for (int right = 0; right < nums.length; right++) {
+                    if (sum < 0) sum = 0; //>
+                    sum += nums[right]; //>
+                    best = Math.max(best, sum);
                 }
                 return best;
             }
@@ -836,37 +872,42 @@ problem(
     examples=[([[1, 2, 3, 4, 5, 6, 1], 3], 12, "Take 1, 6 and 5 from the right."), ([[9, 7, 7, 9, 7, 7, 9], 7], 55, None)],
     tests=[([[2, 2, 2], 2], 4), ([[1, 1000, 1], 1], 1), ([[100, 40, 17, 9, 73, 75], 3], 248)],
     constraints=["1 ≤ k ≤ cards.length ≤ 10^5"],
-    hints=["The cards you take are some from the left plus the rest from the right.",
-           "Start with all k from the left, then trade one left card for one right card at a time."],
+    hints=["The cards you leave behind form one contiguous window of length n − k.",
+           "Minimise the sum of that window."],
     approaches=[approach(
-        name="Sliding Window over the ends", pattern="sliding-window", time="O(k)", space="O(1)",
+        name="Sliding Window (cards left behind)", pattern="sliding-window", time="O(n)", space="O(1)",
         idea="""
-        Start by taking all k cards from the left. Then, one at a time, give back the last left card and take one more from the right end.
+        Whatever you take from the ends, the cards you leave form one contiguous window of length n − k. So find the window of that length with the smallest sum.
 
-        That slides a window of taken cards around the ends of the row; the best total along the way is the answer.
+        The answer is the total of all cards minus that smallest window.
         """,
-        viz=viz(arr="cards", vars=["total", "best"]),
+        viz=viz(arr="cards", ptr={"left": "left", "right": "right"}, win=("left", R_OR.format(d="-1")), vars=["window", "smallest"]),
         demo=[[1, 2, 3, 4, 5, 6, 1], 3],
         py='''
         def card_points(cards, k):
-            total = sum(cards[:k])  #> Take all {k} cards from the left: {total} points.
-            best = total
-            for i in range(1, k + 1):
-                total += cards[-i] - cards[k - i]  #> Give back {cards[k - i]} and take {cards[-i]} from the right: {total}.
-                best = max(best, total)
-            return best
+            size, total = len(cards) - k, sum(cards)
+            window, smallest, left = 0, total, 0
+            for right in range(len(cards)):
+                window += cards[right]
+                if right - left + 1 > size:
+                    window -= cards[left]
+                    left += 1
+                if right - left + 1 == size:
+                    smallest = min(smallest, window)  #> Leaving {cards[left:right + 1]} behind costs {window}. Smallest: {smallest}.
+            return total - (smallest if size else 0)
         ''',
         java='''
         class Solution {
             public int cardPoints(int[] cards, int k) {
-                int total = 0, n = cards.length;
-                for (int i = 0; i < k; i++) total += cards[i]; //>
-                int best = total;
-                for (int i = 1; i <= k; i++) {
-                    total += cards[n - i] - cards[k - i]; //>
-                    best = Math.max(best, total);
+                int size = cards.length - k, total = 0, sum = 0, left = 0;
+                for (int c : cards) total += c;
+                int smallest = total;
+                for (int right = 0; right < cards.length; right++) {
+                    sum += cards[right];
+                    for (; right - left + 1 > size; left++) sum -= cards[left];
+                    if (right - left + 1 == size) smallest = Math.min(smallest, sum); //>
                 }
-                return best;
+                return total - (size == 0 ? 0 : smallest);
             }
         }
         ''',
@@ -886,37 +927,37 @@ problem(
     tests=[([[3, 9, 6], 2], 1), ([[5], 0], 1), ([[1, 1, 1, 2], 1], 3)],
     constraints=["1 ≤ nums.length ≤ 10^5", "0 ≤ k ≤ 10^5"],
     hints=["Sort first: it's best to raise the values just below a target.",
-           "A sorted window can be raised to its right end if right × length − sum ≤ k."],
+           "A sorted window can be raised to its right end if right value × length − sum ≤ k."],
     approaches=[approach(
         name="Sort + Sliding Window", pattern="sliding-window", time="O(n log n)", space="O(1) extra",
         idea="""
-        After sorting, try to make every number in a window equal to the window's largest value, the one at R. The cost is that value times the window length, minus the window sum.
+        After sorting, try to raise every number in the window up to `nums[right]`, the window's largest value. The cost is that value times the length, minus the window sum.
 
-        If the cost exceeds k, shrink from the left. The widest affordable window is the answer.
+        While the cost exceeds k, shrink from the left. The widest affordable window is the answer.
         """,
-        viz=viz(arr="nums", ptr={"L": "l", "R": "r"}, win=("l", R_OR.format(d="-1")), vars=["total", "best"]),
+        viz=viz(arr="nums", ptr={"left": "left", "right": "right"}, win=("left", R_OR.format(d="-1")), vars=["total", "best"]),
         py='''
         def max_frequency(nums, k):
             nums.sort()
-            l = total = best = 0
-            for r, x in enumerate(nums):
-                total += x
-                while x * (r - l + 1) - total > k:
-                    total -= nums[l]
-                    l += 1  #> Raising everything to {x} costs too much, so L moves to {l}.
-                best = max(best, r - l + 1)  #> Raising the window to {x} costs {x * (r - l + 1) - total}. Best: {best}.
+            total, best, left = 0, 0, 0
+            for right in range(len(nums)):
+                total += nums[right]
+                while nums[right] * (right - left + 1) - total > k:
+                    total -= nums[left]
+                    left += 1  #> Raising everything to {nums[right]} costs too much, so shrink: left moves to {left}.
+                best = max(best, right - left + 1)  #> Raising the window to {nums[right]} costs {nums[right] * (right - left + 1) - total}. Best: {best}.
             return best
         ''',
         java='''
         class Solution {
             public int maxFrequency(int[] nums, int k) {
                 Arrays.sort(nums);
-                long total = 0;
-                int l = 0, best = 0;
-                for (int r = 0; r < nums.length; r++) {
-                    total += nums[r];
-                    while ((long) nums[r] * (r - l + 1) - total > k) total -= nums[l++]; //>
-                    best = Math.max(best, r - l + 1); //>
+                long sum = 0;
+                int best = 0, left = 0;
+                for (int right = 0; right < nums.length; right++) {
+                    sum += nums[right];
+                    for (; (long) nums[right] * (right - left + 1) - sum > k; left++) sum -= nums[left]; //>
+                    best = Math.max(best, right - left + 1); //>
                 }
                 return best;
             }
@@ -940,22 +981,22 @@ problem(
     approaches=[approach(
         name="Sliding Window (at most k trick)", pattern="sliding-window", time="O(n)", space="O(1)",
         idea="""
-        Counting windows with at most k odd numbers is a standard sliding window: every valid window ending at R adds r − l + 1 subarrays.
+        Counting windows with at most k odd numbers is the standard template: after shrinking, every window ending at `right` adds right − left + 1 subarrays.
 
         Windows with exactly k odd numbers are those with at most k, minus those with at most k − 1.
         """,
-        viz=viz(arr="nums", ptr={"L": "l", "R": "r"}, win=("l", R_OR.format(d="-1")), vars=["odd", "count"]),
+        viz=viz(arr="nums", ptr={"left": "left", "right": "right"}, win=("left", R_OR.format(d="-1")), vars=["odd", "count"]),
         demo=[[1, 1, 2, 1, 1], 3],
         py='''
         def exactly_k_odd(nums, k):
             def at_most(k):
-                l = count = odd = 0
-                for r, x in enumerate(nums):
-                    odd += x % 2
+                odd, count, left = 0, 0, 0
+                for right in range(len(nums)):
+                    odd += nums[right] % 2
                     while odd > k:
-                        odd -= nums[l] % 2
-                        l += 1
-                    count += r - l + 1  #> Windows ending at {r} with at most {k} odd numbers: {r - l + 1}. Total {count}.
+                        odd -= nums[left] % 2
+                        left += 1
+                    count += right - left + 1  #> Windows ending at {right} with at most {k} odd numbers: {right - left + 1}. Total {count}.
                 return count
 
             return at_most(k) - at_most(k - 1)  #> Exactly {k} odd = at most {k} minus at most {k - 1}.
@@ -967,11 +1008,11 @@ problem(
             }
 
             private int atMost(int[] nums, int k) {
-                int l = 0, count = 0, odd = 0;
-                for (int r = 0; r < nums.length; r++) {
-                    odd += nums[r] % 2;
-                    while (odd > k) odd -= nums[l++] % 2;
-                    count += r - l + 1; //>1
+                int odd = 0, count = 0, left = 0;
+                for (int right = 0; right < nums.length; right++) {
+                    odd += nums[right] % 2;
+                    for (; odd > k; left++) odd -= nums[left] % 2;
+                    count += right - left + 1; //>1
                 }
                 return count;
             }

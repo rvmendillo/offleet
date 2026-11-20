@@ -53,6 +53,11 @@ struct ProblemsView: View {
             .searchable(text: $query, prompt: "Search titles, topics, patterns")
             .navigationTitle("Practice")
             .toolbar {
+                ToolbarItem(placement: .topBarLeading) {
+                    NavigationLink(value: Route.mock(pattern.map { "pattern:" + $0 } ?? (["ai-engineering", "system-design"].contains(category) ? "cat:" + category : "any"))) {
+                        Label("Mock interview", systemImage: "timer")
+                    }
+                }
                 ToolbarItem(placement: .topBarTrailing) {
                     Menu {
                         Picker("Difficulty", selection: $difficulty) {
@@ -112,6 +117,8 @@ struct CategoryOption: Identifiable {
     static let all = [
         CategoryOption(id: "all", title: "All", icon: "square.grid.2x2"),
         CategoryOption(id: "algorithms", title: "Algorithms", icon: "function"),
+        CategoryOption(id: "ai-engineering", title: "AI Engineering", icon: "sparkles"),
+        CategoryOption(id: "system-design", title: "Senior Design", icon: "building.columns"),
         CategoryOption(id: "spring-boot", title: "Spring Boot", icon: "leaf"),
         CategoryOption(id: "angular", title: "Angular", icon: "a.circle"),
     ]

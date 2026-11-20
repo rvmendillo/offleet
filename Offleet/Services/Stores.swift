@@ -10,6 +10,7 @@ final class ContentStore: ObservableObject {
     @Published private(set) var subjects: [Subject] = []
     @Published private(set) var books: [Book] = []
     @Published private(set) var tracks: [Track] = []
+    @Published private(set) var paths: [CareerPath] = []
     @Published private(set) var isLoaded = false
     @Published private(set) var loadError: String?
 
@@ -36,6 +37,7 @@ final class ContentStore: ObservableObject {
             subjects = c.subjects
             books = c.books
             tracks = c.tracks
+            paths = c.paths
             problemIndex = Dictionary(uniqueKeysWithValues: c.problems.map { ($0.id, $0) })
             patternIndex = Dictionary(uniqueKeysWithValues: c.patterns.map { ($0.id, $0) })
             var bi: [String: (Subject, Bite)] = [:]
@@ -53,6 +55,18 @@ final class ContentStore: ObservableObject {
     func subject(_ id: String) -> Subject? { subjects.first { $0.id == id } }
     func book(_ id: String) -> Book? { books.first { $0.id == id } }
     func track(_ id: String) -> Track? { tracks.first { $0.id == id } }
+    func careerPath(_ id: String) -> CareerPath? { paths.first { $0.id == id } }
+
+    /// Problems matching a mock-interview focus such as "any", "pattern:sliding-window" or "cat:ai-engineering".
+    func problems(focus: String, difficulty: String) -> [Problem] {
+        problems.filter { p in
+            guard p.isAlgorithm else { return false }
+            if difficulty != "Any" && p.diff != difficulty { return false }
+            if focus.hasPrefix("pattern:") { return p.patterns.contains(String(focus.dropFirst(8))) }
+            if focus.hasPrefix("cat:") { return p.cat == String(focus.dropFirst(4)) }
+            return true
+        }
+    }
 
     func tutorial(for problemId: String) -> [String: [Frame]] {
         if let t = tutorialCache[problemId] { return t }
@@ -80,6 +94,22 @@ struct BookPosition: Codable, Hashable {
     var para: Int
 }
 
+struct SRSItem: Codable, Hashable {
+    var interval: Int
+    var ease: Double
+    var due: String
+    var reps: Int
+}
+
+struct MockAttempt: Codable, Hashable, Identifiable {
+    var id: String
+    var problemId: String
+    var date: String
+    var seconds: Int
+    var rating: Int
+    var hints: Int
+}
+
 struct ProgressData: Codable {
     var solved: Set<String> = []
     var bookmarked: Set<String> = []
@@ -91,6 +121,28 @@ struct ProgressData: Codable {
     var lastBook: String?
     var books: [String: BookPosition] = [:]
     var activeDays: [String] = []
+    var activity: [String: Int] = [:]
+    var srs: [String: SRSItem] = [:]
+    var mocks: [MockAttempt] = []
+
+    init() {}
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        solved = (try? c.decodeIfPresent(Set<String>.self, forKey: .solved)) ?? []
+        bookmarked = (try? c.decodeIfPresent(Set<String>.self, forKey: .bookmarked)) ?? []
+        watched = (try? c.decodeIfPresent(Set<String>.self, forKey: .watched)) ?? []
+        learned = (try? c.decodeIfPresent(Set<String>.self, forKey: .learned)) ?? []
+        quiz = (try? c.decodeIfPresent([String: Bool].self, forKey: .quiz)) ?? [:]
+        notes = (try? c.decodeIfPresent([String: String].self, forKey: .notes)) ?? [:]
+        lastProblem = try? c.decodeIfPresent(String.self, forKey: .lastProblem)
+        lastBook = try? c.decodeIfPresent(String.self, forKey: .lastBook)
+        books = (try? c.decodeIfPresent([String: BookPosition].self, forKey: .books)) ?? [:]
+        activeDays = (try? c.decodeIfPresent([String].self, forKey: .activeDays)) ?? []
+        activity = (try? c.decodeIfPresent([String: Int].self, forKey: .activity)) ?? [:]
+        srs = (try? c.decodeIfPresent([String: SRSItem].self, forKey: .srs)) ?? [:]
+        mocks = (try? c.decodeIfPresent([MockAttempt].self, forKey: .mocks)) ?? []
+    }
 }
 
 @MainActor
@@ -112,7 +164,12 @@ final class ProgressStore: ObservableObject {
         change(&data)
         let today = Self.dayString(Date())
         if data.activeDays.last != today { data.activeDays.append(today) }
+        data.activity[today, default: 0] += 1
         scheduleSave()
+    }
+
+    static func day(offset: Int) -> String {
+        dayString(Calendar.current.date(byAdding: .day, value: offset, to: Date()) ?? Date())
     }
 
     private func scheduleSave() {
@@ -137,10 +194,66 @@ final class ProgressStore: ObservableObject {
     func isBookmarked(_ id: String) -> Bool { data.bookmarked.contains(id) }
     func isLearned(_ id: String) -> Bool { data.learned.contains(id) }
 
-    func toggleSolved(_ id: String) { mutate { $0.solved.formSymmetricDifference([id]) } }
+    func toggleSolved(_ id: String) {
+        mutate {
+            $0.solved.formSymmetricDifference([id])
+            if $0.solved.contains(id) && $0.srs["p:" + id] == nil {
+                $0.srs["p:" + id] = SRSItem(interval: 1, ease: 2.3, due: Self.day(offset: 1), reps: 0)
+            }
+        }
+    }
     func toggleBookmark(_ id: String) { mutate { $0.bookmarked.formSymmetricDifference([id]) } }
     func markWatched(_ key: String) { mutate { $0.watched.insert(key) } }
-    func setLearned(_ id: String, _ on: Bool) { mutate { if on { $0.learned.insert(id) } else { $0.learned.remove(id) } } }
+    func setLearned(_ id: String, _ on: Bool) {
+        mutate {
+            if on {
+                $0.learned.insert(id)
+                if $0.srs["b:" + id] == nil { $0.srs["b:" + id] = SRSItem(interval: 1, ease: 2.3, due: Self.day(offset: 1), reps: 0) }
+            } else {
+                $0.learned.remove(id)
+            }
+        }
+    }
+
+    // MARK: spaced repetition
+
+    /// Keys ("p:<problem>" or "b:<bite>") that are due today or overdue.
+    var dueKeys: [String] {
+        let today = Self.dayString(Date())
+        return data.srs.filter { $0.value.due <= today }.sorted { $0.value.due < $1.value.due }.map(\.key)
+    }
+
+    /// grade: 0 again, 1 hard, 2 good, 3 easy.
+    func review(_ key: String, grade: Int) {
+        mutate {
+            var it = $0.srs[key] ?? SRSItem(interval: 1, ease: 2.3, due: Self.day(offset: 0), reps: 0)
+            switch grade {
+            case 0:
+                it.interval = 1
+                it.ease = max(1.3, it.ease - 0.2)
+            case 1:
+                it.interval = max(1, Int((Double(it.interval) * 1.2).rounded()))
+                it.ease = max(1.3, it.ease - 0.15)
+            case 2:
+                it.interval = max(2, Int((Double(it.interval) * it.ease).rounded()))
+            default:
+                it.interval = max(3, Int((Double(it.interval) * it.ease * 1.3).rounded()))
+                it.ease += 0.15
+            }
+            it.reps += 1
+            it.due = Self.day(offset: it.interval)
+            $0.srs[key] = it
+        }
+    }
+
+    // MARK: mock interviews
+
+    func recordMock(problemId: String, seconds: Int, rating: Int, hints: Int) {
+        let attempt = MockAttempt(id: UUID().uuidString, problemId: problemId, date: Self.dayString(Date()),
+                                  seconds: seconds, rating: rating, hints: hints)
+        mutate { $0.mocks.insert(attempt, at: 0) }
+        review("p:" + problemId, grade: rating)
+    }
     func recordQuiz(_ id: String, correct: Bool) { mutate { $0.quiz[id] = correct } }
     func setNote(_ id: String, _ text: String) { mutate { $0.notes[id] = text } }
     func opened(problem id: String) { mutate { $0.lastProblem = id } }

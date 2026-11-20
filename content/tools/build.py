@@ -43,8 +43,10 @@ PROBLEM_MODULES = [
 FRAMEWORK_MODULES = ["spring_boot", "angular"]
 REVIEWER_MODULES = ["cs", "ai", "adv_math", "calculus"]
 BOOK_MODULES = ["handbook"]
+PROBLEM_MODULES += ["ai_engineering", "senior_design"]
 
 MAX_STEPS = 34
+ALGO_CATEGORIES = {"algorithms", "ai-engineering", "system-design"}
 
 
 # ------------------------------------------------------------------ helpers
@@ -139,10 +141,14 @@ class Report:
 # ------------------------------------------------------------------ loading
 def load_modules(only=None):
     for pkg, mods in (("problems", PROBLEM_MODULES), ("frameworks", FRAMEWORK_MODULES),
-                      ("reviewer", REVIEWER_MODULES), ("books", BOOK_MODULES)):
+                      ("reviewer", REVIEWER_MODULES), ("books", BOOK_MODULES), ("", ["paths"])):
         for mod in mods:
             path = os.path.join(CONTENT, pkg, mod + ".py")
             if not os.path.exists(path):
+                continue
+            if not pkg:
+                if not only:
+                    importlib.import_module(mod)
                 continue
             if only and mod not in only and pkg in ("problems", "frameworks"):
                 continue
@@ -166,7 +172,7 @@ def prepare(p, num, rep: Report):
         rep.err(pid, "difficulty must be Easy/Medium/Hard")
     p["num"] = num
     p["design"] = bool(p.get("design"))
-    algo = p["category"] == "algorithms"
+    algo = p["category"] in ALGO_CATEGORIES
     for k, a in enumerate(p["approaches"], 1):
         a["aid"] = f"a{k}"
         if a.get("pattern") not in dsl.PATTERN_IDS:
@@ -267,7 +273,7 @@ def verify_java(problems, rep: Report):
             files.append(os.path.join(HERE, "java", sub, f))
     jobs, owners = [], {}
     for p in problems:
-        if p["category"] != "algorithms":
+        if p["category"] not in ALGO_CATEGORIES:
             continue
         for a in p["approaches"]:
             if "java_disp" not in a:
@@ -465,7 +471,7 @@ def export_problem(p):
     if p.get("eli5"):
         out["eli5"] = p["eli5"]
     for ex in p.get("examples", []):
-        if p["category"] == "algorithms":
+        if p["category"] in ALGO_CATEGORIES:
             e = {"in": demo_desc(p, ex[0]) if not p["design"] else _design_in(ex[0]), "out": jfmt(ex[1])}
             if len(ex) > 2 and ex[2]:
                 e["why"] = ex[2]
@@ -501,6 +507,8 @@ def bite_script(b):
         return speakify(b["say"])
     parts = [b["title"] + ".", b["tldr"]]
     parts += [pt if pt.endswith((".", "!", "?")) else pt + "." for pt in b["points"]]
+    if b.get("flow"):
+        parts.append("Picture the flow: " + ". Then, ".join(b["flow"]) + ".")
     if b.get("say_formula"):
         parts.append(b["say_formula"] if b["say_formula"].endswith(".") else b["say_formula"] + ".")
     elif b.get("formula"):
@@ -524,7 +532,7 @@ def export_reviewer(rep: Report):
                     rep.err("reviewer", f"duplicate bite id {b['id']}")
                 seen.add(b["id"])
                 eb = {k: b[k] for k in ("id", "title", "tldr", "points") if b.get(k)}
-                for k in ("formula", "example", "tip"):
+                for k in ("formula", "example", "tip", "flow"):
                     if b.get(k):
                         eb[k] = b[k]
                 if b.get("quiz"):
@@ -569,7 +577,7 @@ def export_books(problems, reviewer):
             text.append(f"Time {a['time']}, space {a['space']}." + (" " + strip_md(a["why"]) if a.get("why") else ""))
         return {"id": p["id"], "title": f"{p['num']}. {p['title']}", "paras": para_objs("\n\n".join(text))}
 
-    algo = [p for p in problems if p["category"] == "algorithms"]
+    algo = [p for p in problems if p["category"] in ALGO_CATEGORIES]
     if algo:
         books.append({"id": "walkthroughs", "title": "Problem Walkthroughs", "author": "Offleet",
                       "blurb": "Listen to every problem and its solution ideas, hands-free.",
@@ -592,6 +600,30 @@ def export_books(problems, reviewer):
     return {"books": books}
 
 
+def export_paths(problems, reviewer, books, tracks, rep: Report):
+    pids = {p["id"] for p in problems}
+    bids = {b["id"] for s in reviewer["subjects"] for u in s["units"] for b in u["bites"]}
+    sids = {s["id"] for s in reviewer["subjects"]}
+    bookids = {b["id"] for b in books["books"]}
+    tids = {t["id"] for t in tracks["tracks"]}
+    known = {"problem": pids, "bite": bids, "subject": sids, "book": bookids, "track": tids}
+    out = []
+    for path in dsl.PATHS:
+        stages = []
+        for st in path["stages"]:
+            items = []
+            for group in st["items"]:
+                for it in (group if isinstance(group, list) else [group]):
+                    ids = known.get(it["kind"])
+                    if ids is not None and it["id"] not in ids:
+                        rep.err("paths", f"{path['id']}: unknown {it['kind']} {it['id']}")
+                        continue
+                    items.append(it)
+            stages.append({"title": st["title"], "blurb": st["blurb"], "items": items})
+        out.append({k: path[k] for k in ("id", "title", "subtitle", "icon", "color", "blurb")} | {"stages": stages})
+    return {"paths": out}
+
+
 def export_tracks(problems):
     by_pat = {}
     for p in problems:
@@ -602,6 +634,12 @@ def export_tracks(problems):
         if by_pat.get(pid):
             tracks.append({"id": f"pat-{pid}", "title": name, "summary": summary, "icon": icon, "color": color,
                            "problems": by_pat[pid]})
+    for cat, title, summary, icon, color in (
+            ("ai-engineering", "AI Engineering Coding", "Coding problems from real LLM and ML systems.", "sparkles", "#8B5CF6"),
+            ("system-design", "Senior Design Coding", "Implement rate limiters, caches and other building blocks.", "building.columns", "#0EA5E9")):
+        ids = [p["id"] for p in problems if p["category"] == cat]
+        if ids:
+            tracks.append({"id": f"cat-{cat}", "title": title, "summary": summary, "icon": icon, "color": color, "problems": ids})
     starter = [p["id"] for p in problems if p["category"] == "algorithms" and p["difficulty"] == "Easy"][:40]
     if starter:
         tracks.insert(0, {"id": "starter", "title": "Starter Path", "summary": "Gentle problems to build confidence.",
@@ -629,7 +667,7 @@ def main():
         ids.add(p["id"])
         prepare(p, num, rep)
     for p in problems:
-        if p["category"] == "algorithms":
+        if p["category"] in ALGO_CATEGORIES:
             verify_python(p, rep)
     if not args.no_java:
         verify_java(problems, rep)
@@ -637,7 +675,7 @@ def main():
     for p in problems:
         tut = {}
         for a in p["approaches"]:
-            if p["category"] == "algorithms":
+            if p["category"] in ALGO_CATEGORIES:
                 tut[a["aid"]] = build_algo_tutorial(p, a, rep)
             elif a.get("files"):
                 tut[a["aid"]] = build_code_tutorial(p, a, rep)
@@ -645,6 +683,7 @@ def main():
     reviewer = export_reviewer(rep)
     books = export_books(problems, reviewer)
     tracks = export_tracks(problems)
+    paths = export_paths(problems, reviewer, books, tracks, rep)
 
     if not args.quiet or rep.errors:
         for w in rep.warnings:
@@ -680,6 +719,7 @@ def main():
     dump("reviewer.json", reviewer)
     dump("books.json", books)
     dump("tracks.json", tracks)
+    dump("paths.json", paths)
     dump("meta.json", {"version": 1, "built": time.strftime("%Y-%m-%d"), "problems": len(problems),
                        "categories": cats, "bites": nbites, "books": len(books["books"])})
     size = sum(os.path.getsize(os.path.join(dp, f)) for dp, _, fs in os.walk(OUT) for f in fs)

@@ -90,16 +90,64 @@ def unit(title, *bites, blurb=""):
     return {"title": title, "blurb": blurb, "bites": list(bites)}
 
 
-def bite(id, title, tldr, points, *, formula=None, say_formula=None, example=None, tip=None, quiz=None, say=None):
+def bite(id, title, tldr, points, *, formula=None, say_formula=None, example=None, tip=None, quiz=None, say=None,
+         flow=None):
     """A bite-sized reviewer card.
 
     quiz = (question, [options...], correct_index, why)
     say  = optional full spoken script (otherwise generated from the fields)
+    flow = optional architecture flows, e.g. ["Client → Load Balancer → API → Cache → DB"]
     """
     return dict(id=id, title=title, tldr=tldr, points=points, formula=formula, say_formula=say_formula,
-                example=example, tip=tip, quiz=quiz, say=say)
+                example=example, tip=tip, quiz=quiz, say=say, flow=flow)
 
 
 def chapter(book, title, text, *, id=None):
     """Audiobook chapter for a hand-written book (e.g. the patterns handbook)."""
     CHAPTERS.append(dict(book=book, title=title, text=dedent(text), id=id))
+
+
+# ------------------------------------------------------------------ career paths
+PATHS: list[dict] = []
+
+
+def career_path(**kw):
+    """A roadmap: id, title, subtitle, icon, color, blurb, stages=[stage(...)]."""
+    PATHS.append(kw)
+    return kw
+
+
+def stage(title, blurb, *items):
+    return {"title": title, "blurb": blurb, "items": list(items)}
+
+
+def P(*ids):
+    """Problems by id."""
+    return [{"kind": "problem", "id": i} for i in ids]
+
+
+def B(*ids):
+    """Reviewer bites by id."""
+    return [{"kind": "bite", "id": i} for i in ids]
+
+
+def S(subject_id):
+    """A whole reviewer subject."""
+    return [{"kind": "subject", "id": subject_id}]
+
+
+def BOOK(book_id):
+    return [{"kind": "book", "id": book_id}]
+
+
+def TRACK(track_id):
+    return [{"kind": "track", "id": track_id}]
+
+
+def MOCK(focus, title):
+    """Start a mock interview filtered by focus, e.g. 'pattern:sliding-window' or 'cat:ai-engineering'."""
+    return [{"kind": "mock", "id": focus, "title": title}]
+
+
+def TIP(text):
+    return [{"kind": "tip", "id": "tip", "title": text}]

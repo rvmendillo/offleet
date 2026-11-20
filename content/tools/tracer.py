@@ -517,7 +517,8 @@ class _Tracer:
         if event == "line":
             self._resolve(frame, frame.f_lineno, None, False)
             ln = frame.f_lineno
-            if ln in self.marks:
+            # lambdas / comprehensions / generator expressions on a narrated line must not trigger it themselves
+            if ln in self.marks and not frame.f_code.co_name.startswith("<"):
                 self.pending[id(frame)] = (ln,) + self.marks[ln]
         elif event == "return":
             self._resolve(frame, frame.f_lineno, arg, True)

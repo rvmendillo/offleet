@@ -109,3 +109,26 @@ subject(id="calculus", title="Calculus", icon="function", color="#F472B6", blurb
                formula="lim x→a f(x) = L", say_formula="the limit as x approaches a of f of x is L",
                example="...", tip="...", quiz=("Q?", ["A", "B", "C", "D"], 1, "why"))) ])
 ```
+
+## House style (learner preferences)
+
+- **Sliding window (Java)** — the learner's preferred template; use it for every variable-size window:
+
+  ```java
+  int sum = 0, minLen = nums.length + 1, left = 0;
+  for (int right = 0; right < nums.length; right++) {
+      sum += nums[right];                                  // 1. add the element at right first
+      for (; sum >= s; sum -= nums[left], left++) {        // 2. shrink in the for-update clause
+          minLen = Math.min(minLen, right - left + 1);     // 3. record while the window is valid
+      }
+  }
+  return minLen <= nums.length ? minLen : 0;               // n + 1 sentinel = "not found"
+  ```
+
+  "Longest" windows shrink first and record after: `for (; invalid; left++) remove(left);` then
+  `best = Math.max(best, right - left + 1);`. Fixed windows use the same loop with `right - left + 1 > k`.
+- Names: `left` / `right` for window edges (Python mirrors the same structure with a `while` loop).
+- Keep solutions short and optimal: O(n) / O(1) where possible; prefer a Sliding Window or Two Pointers approach
+  first whenever one exists, then other approaches.
+- Audience: software engineers moving into AI engineering or senior roles — favour practical, production-flavoured
+  examples (rate limiters, chunking, caches, ranking) alongside classic problems.

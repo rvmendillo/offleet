@@ -29,6 +29,8 @@ enum Brand {
         switch c {
         case "spring-boot": return "Spring Boot"
         case "angular": return "Angular"
+        case "ai-engineering": return "AI Engineering"
+        case "system-design": return "Senior Design"
         default: return "Algorithms"
         }
     }
