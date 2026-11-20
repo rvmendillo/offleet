@@ -400,7 +400,7 @@ struct GridVizView: View {
             if let ps = g.p, !ps.isEmpty {
                 HStack(spacing: 10) {
                     ForEach(ps, id: \.l) { p in
-                        Label("\(name(p.l)) (\(p.r), \(p.c))", systemImage: "scope")
+                        Label(g.v.count == 1 ? "\(name(p.l)) = \(p.c)" : "\(name(p.l)) (\(p.r), \(p.c))", systemImage: "scope")
                             .font(.caption2.weight(.semibold))
                             .foregroundStyle(VizPalette.pointer(p.l))
                     }

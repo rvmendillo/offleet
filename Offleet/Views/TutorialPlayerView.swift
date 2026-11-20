@@ -122,7 +122,7 @@ struct TutorialPlayerView: View {
                         .id(f.isStep ? "viz" : "card-\(player.index)")
                         .transition(.asymmetric(insertion: .opacity.combined(with: .scale(scale: 0.97)), removal: .opacity))
                         .padding(14)
-                        .padding(.bottom, 70)
+                        .padding(.bottom, 100) // the presenter badge + name tag (~87pt) sits here
                 } else {
                     ContentUnavailableView("No tutorial yet", systemImage: "film", description: Text("This problem doesn't have an animated walkthrough."))
                 }
