@@ -84,7 +84,7 @@ struct TutorialPlayerView: View {
                 Text(approach?.name ?? "").font(.caption).foregroundStyle(.white.opacity(0.6)).lineLimit(1)
             }
             Spacer()
-            if let a = approach, a.languages.count > 1 {
+            if let a = approach, problem.isAlgorithm, a.languages.count > 1 {
                 Menu {
                     ForEach(a.languages, id: \.self) { l in
                         Button(Brand.languageTitle(l)) { lang = l }

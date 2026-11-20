@@ -73,7 +73,17 @@ def approach(**kw):
     for key in ("py", "java", "ts", "html", "idea", "why"):
         if key in kw:
             kw[key] = dedent(kw[key])
+    for f in kw.get("files", []):
+        f["src"] = dedent(f["src"])
     return kw
+
+
+def file(name, src, lang=None):
+    """A source file for framework walkthroughs; language inferred from the extension."""
+    ext = name.rsplit(".", 1)[-1]
+    lang = lang or {"java": "java", "ts": "typescript", "html": "html", "yml": "yaml", "yaml": "yaml",
+                    "properties": "properties", "json": "json", "py": "python"}.get(ext, ext)
+    return {"name": name, "lang": lang, "src": src}
 
 
 def viz(**kw):

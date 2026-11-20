@@ -20,9 +20,14 @@ jobs:
         with: { python-version: "3.12" }
       - uses: actions/setup-java@v4
         with: { distribution: temurin, java-version: "21" }
+      - uses: actions/setup-node@v4
+        with: { node-version: "22" }
       - name: Build + verify content bundle
         run: |
           if [ -f content/tools/build.py ]; then python3 content/tools/build.py --check; else echo "no content pipeline yet"; fi
+      - name: Compile-check Spring Boot and Angular exercises
+        run: |
+          if [ -f content/tools/check_frameworks.py ]; then python3 content/tools/check_frameworks.py; fi
 
   ipa:
     name: Build unsigned IPA

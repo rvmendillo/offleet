@@ -230,8 +230,10 @@ struct ProblemDetailView: View {
             HStack(spacing: 8) {
                 if let pat = content.pattern(a.pattern) { PatternBadge(pattern: pat) }
                 Spacer()
-                complexity("Time", a.time)
-                complexity("Space", a.space)
+                if p.isAlgorithm {
+                    complexity("Time", a.time)
+                    complexity("Space", a.space)
+                }
             }
             MarkdownBlock(text: a.idea).font(.subheadline)
             if let why = a.why {
@@ -258,14 +260,20 @@ struct ProblemDetailView: View {
                 }
                 .buttonStyle(.borderedProminent)
             }
-            if a.languages.count > 1 {
-                Picker("Language", selection: $lang) {
-                    ForEach(a.languages, id: \.self) { l in Text(Brand.languageTitle(l)).tag(l) }
+            if p.isAlgorithm {
+                if a.languages.count > 1 {
+                    Picker("Language", selection: $lang) {
+                        ForEach(a.languages, id: \.self) { l in Text(Brand.languageTitle(l)).tag(l) }
+                    }
+                    .pickerStyle(.segmented)
                 }
-                .pickerStyle(.segmented)
-            }
-            if let file = a.code(for: lang) ?? a.code.first {
-                CodeView(code: file.src, lang: file.lang, fileName: file.name)
+                if let file = a.code(for: lang) ?? a.code.first {
+                    CodeView(code: file.src, lang: file.lang, fileName: file.name)
+                }
+            } else {
+                ForEach(Array(a.code.enumerated()), id: \.offset) { _, file in
+                    CodeView(code: file.src, lang: file.lang, fileName: file.name)
+                }
             }
             if a.languages.contains("java") && p.isAlgorithm {
                 Text("Java snippets assume `import java.util.*;` and the standard `ListNode` / `TreeNode` classes.")
