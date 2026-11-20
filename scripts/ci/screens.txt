@@ -1,17 +1,25 @@
 # name  launch-arguments   (one screenshot per line; "dark" switches the simulator to dark mode)
-01-onboarding -uiScreen onboarding
-02-home -uiScreen home
-03-practice -uiScreen practice
-04-problem -uiScreen problem -uiProblem pair-sum-sorted
-05-tutorial-title -uiScreen tutorial -uiProblem pair-sum-sorted -uiFrame 0
-06-tutorial-step -uiScreen tutorial -uiProblem pair-sum-sorted -uiFrame 9
-07-tutorial-window -uiScreen tutorial -uiProblem longest-unique-substring -uiFrame 15
-08-tutorial-rotate -uiScreen tutorial -uiProblem rotate-right -uiFrame 8
-09-tutorial-idea -uiScreen tutorial -uiProblem most-water -uiFrame 3
-10-learn -uiScreen learn
-11-listen -uiScreen listen
-12-nowplaying -uiScreen nowplaying
-13-me -uiScreen me
+01-home -uiScreen home
+02-practice -uiScreen practice
+03-learn -uiScreen learn
+04-path-ai -uiScreen path -uiPath ai-engineer
+05-path-senior -uiScreen path -uiPath senior-engineer
+06-mock -uiScreen mock
+07-bite-flow -uiScreen bite -uiBite sd-rag-assistant
+08-bite-calculus -uiScreen bite -uiBite calc-ftc
+09-tutorial-user-template -uiScreen tutorial -uiProblem shortest-sum-at-least -uiFrame 12 -uiLang java
+10-tutorial-tree -uiScreen tutorial -uiProblem tree-diameter -uiFrame 9
+11-tutorial-grid -uiScreen tutorial -uiProblem count-islands -uiFrame 10
+12-tutorial-linked -uiScreen tutorial -uiProblem reverse-list -uiFrame 10
+13-tutorial-graph -uiScreen tutorial -uiProblem can-finish-courses -uiFrame 9
+14-tutorial-table -uiScreen tutorial -uiProblem fewest-coins -uiFrame 10
+15-tutorial-spring -uiScreen tutorial -uiProblem sb-rate-limit-filter -uiFrame 8
+16-problem-spring -uiScreen problem -uiProblem sb-rate-limit-filter
+17-problem-ai -uiScreen problem -uiProblem chunk-with-overlap
+18-listen -uiScreen listen
+19-nowplaying -uiScreen nowplaying -uiBook handbook
+20-me -uiScreen me
+21-review -uiScreen review
 dark
-14-home-dark -uiScreen home
-15-problem-dark -uiScreen problem -uiProblem three-sum-zero
+22-home-dark -uiScreen home
+23-tutorial-dark -uiScreen tutorial -uiProblem window-maximums -uiFrame 12

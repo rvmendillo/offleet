@@ -41,7 +41,7 @@ PROBLEM_MODULES = [
     "matrix", "design",
 ]
 FRAMEWORK_MODULES = ["spring_boot", "angular"]
-REVIEWER_MODULES = ["cs", "ai", "adv_math", "calculus"]
+REVIEWER_MODULES = ["cs", "ai", "adv_math", "calculus", "ai_eng", "system_design", "playbook", "cheatsheets"]
 BOOK_MODULES = ["handbook"]
 PROBLEM_MODULES += ["ai_engineering", "senior_design"]
 

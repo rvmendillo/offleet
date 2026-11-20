@@ -57,6 +57,7 @@ extension RootView {
     fileprivate func applyDebugLaunch() {
         guard let screen = DebugLaunch.screen else { return }
         settings.hasOnboarded = screen != "onboarding"
+        if let lang = DebugLaunch.value("-uiLang") { settings.language = lang }
         if let t = DebugLaunch.tab { tab = t }
         if screen == "nowplaying", let b = content.book(DebugLaunch.book ?? "") ?? content.books.first {
             audiobook.open(b, chapter: 0, autoplay: false)

@@ -21,8 +21,8 @@ enum DebugLaunch {
     static var tab: AppTab? {
         switch screen {
         case "home": return .home
-        case "practice", "problem", "tutorial": return .practice
-        case "learn", "bite", "subject": return .learn
+        case "practice", "problem", "tutorial", "mock": return .practice
+        case "learn", "bite", "subject", "path", "review": return .learn
         case "listen", "nowplaying": return .listen
         case "me": return .me
         default: return nil
@@ -32,6 +32,7 @@ enum DebugLaunch {
     static var practicePath: NavigationPath {
         var p = NavigationPath()
         if let id = problem, screen == "problem" || screen == "tutorial" { p.append(Route.problem(id)) }
+        if screen == "mock" { p.append(Route.mock("any")) }
         return p
     }
 
@@ -39,6 +40,8 @@ enum DebugLaunch {
         var p = NavigationPath()
         if screen == "bite", let id = bite { p.append(Route.bite(id)) }
         if screen == "subject", let id = value("-uiSubject") { p.append(Route.subject(id)) }
+        if screen == "path", let id = value("-uiPath") { p.append(Route.path(id)) }
+        if screen == "review" { p.append(Route.review) }
         return p
     }
 }
